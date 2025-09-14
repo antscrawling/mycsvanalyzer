@@ -1,0 +1,12 @@
+# Python-generated files
+__pycache__/
+*.py[oc]
+build/
+dist/
+wheels/
+*.egg-info
+src/sales_timeseries.db
+src/sales_timeseries.db.wal
+src/sales_timeseries.csv
+# Virtual environments
+.venv

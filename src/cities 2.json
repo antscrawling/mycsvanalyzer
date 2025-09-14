@@ -1,0 +1,247 @@
+[
+    {
+        "name": "New York",
+        "country": "United States",
+        "country_id": "99001"
+    },
+    {
+        "name": "Tokyo",
+        "country": "Japan",
+        "country_id": "99002"
+    },
+    {
+        "name": "Paris",
+        "country": "France",
+        "country_id": "99003"
+    },
+    {
+        "name": "London",
+        "country": "United Kingdom",
+        "country_id": "99004"
+    },
+    {
+        "name": "Sydney",
+        "country": "Australia",
+        "country_id": "99005"
+    },
+    {
+        "name": "Berlin",
+        "country": "Germany",
+        "country_id": "99006"
+    },
+    {
+        "name": "Toronto",
+        "country": "Canada",
+        "country_id": "99007"
+    },
+    {
+        "name": "Beijing",
+        "country": "China",
+        "country_id": "99008"
+    },
+    {
+        "name": "Moscow",
+        "country": "Russia",
+        "country_id": "99009"
+    },
+    {
+        "name": "Rio de Janeiro",
+        "country": "Brazil",
+        "country_id": "99010"
+    },
+    {
+        "name": "Cape Town",
+        "country": "South Africa",
+        "country_id": "99011"
+    },
+    {
+        "name": "Mumbai",
+        "country": "India",
+        "country_id": "99012"
+    },
+    {
+        "name": "Mexico City",
+        "country": "Mexico",
+        "country_id": "99013"
+    },
+    {
+        "name": "Buenos Aires",
+        "country": "Argentina",
+        "country_id": "99014"
+    },
+    {
+        "name": "Cairo",
+        "country": "Egypt",
+        "country_id": "99015"
+    },
+    {
+        "name": "Bangkok",
+        "country": "Thailand",
+        "country_id": "99016"
+    },
+    {
+        "name": "Istanbul",
+        "country": "Turkey",
+        "country_id": "99017"
+    },
+    {
+        "name": "Seoul",
+        "country": "South Korea",
+        "country_id": "99018"
+    },
+    {
+        "name": "Singapore",
+        "country": "Singapore",
+        "country_id": "99019"
+    },
+    {
+        "name": "Dubai",
+        "country": "United Arab Emirates",
+        "country_id": "99020"
+    },
+    {
+        "name": "Jakarta",
+        "country": "Indonesia",
+        "country_id": "99021"
+    },
+    {
+        "name": "Lagos",
+        "country": "Nigeria",
+        "country_id": "99022"
+    },
+    {
+        "name": "Nairobi",
+        "country": "Kenya",
+        "country_id": "99023"
+    },
+    {
+        "name": "Kuala Lumpur",
+        "country": "Malaysia",
+        "country_id": "99024"
+    },
+    {
+        "name": "Madrid",
+        "country": "Spain",
+        "country_id": "99025"
+    },
+    {
+        "name": "Rome",
+        "country": "Italy",
+        "country_id": "99026"
+    },
+    {
+        "name": "Athens",
+        "country": "Greece",
+        "country_id": "99027"
+    },
+    {
+        "name": "Lisbon",
+        "country": "Portugal",
+        "country_id": "99028"
+    },
+    {
+        "name": "Hanoi",
+        "country": "Vietnam",
+        "country_id": "99029"
+    },
+    {
+        "name": "Manila",
+        "country": "Philippines",
+        "country_id": "99030"
+    },
+    {
+        "name": "Santiago",
+        "country": "Chile",
+        "country_id": "99031"
+    },
+    {
+        "name": "Bogotá",
+        "country": "Colombia",
+        "country_id": "99032"
+    },
+    {
+        "name": "Lima",
+        "country": "Peru",
+        "country_id": "99033"
+    },
+    {
+        "name": "Caracas",
+        "country": "Venezuela",
+        "country_id": "99034"
+    },
+    {
+        "name": "Warsaw",
+        "country": "Poland",
+        "country_id": "99035"
+    },
+    {
+        "name": "Prague",
+        "country": "Czech Republic",
+        "country_id": "99036"
+    },
+    {
+        "name": "Vienna",
+        "country": "Austria",
+        "country_id": "99037"
+    },
+    {
+        "name": "Budapest",
+        "country": "Hungary",
+        "country_id": "99038"
+    },
+    {
+        "name": "Stockholm",
+        "country": "Sweden",
+        "country_id": "99039"
+    },
+    {
+        "name": "Oslo",
+        "country": "Norway",
+        "country_id": "99040"
+    },
+    {
+        "name": "Copenhagen",
+        "country": "Denmark",
+        "country_id": "99041"
+    },
+    {
+        "name": "Helsinki",
+        "country": "Finland",
+        "country_id": "99042"
+    },
+    {
+        "name": "Reykjavik",
+        "country": "Iceland",
+        "country_id": "99043"
+    },
+    {
+        "name": "Zurich",
+        "country": "Switzerland",
+        "country_id": "99044"
+    },
+    {
+        "name": "Brussels",
+        "country": "Belgium",
+        "country_id": "99045"
+    },
+    {
+        "name": "Amsterdam",
+        "country": "Netherlands",
+        "country_id": "99046"
+    },
+    {
+        "name": "Dublin",
+        "country": "Ireland",
+        "country_id": "99047"
+    },
+    {
+        "name": "Edinburgh",
+        "country": "Scotland",
+        "country_id": "99048"
+    },
+    {
+        "name": "Glasgow",
+        "country": "Scotland",
+        "country_id": "99049"
+    }
+]
