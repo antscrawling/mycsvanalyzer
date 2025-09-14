@@ -1,0 +1,3 @@
+
+check the resource running
+ps -arcwwwxo pid,ppid,command,%mem,%cpu | head -n 10
