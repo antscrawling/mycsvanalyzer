@@ -9,3 +9,5 @@ pyarrow
 tqdm
 openai
 python-dotenv
+pydantic
+fastapi

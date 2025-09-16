@@ -2,7 +2,14 @@ import duckdb
 import pandas as pd
 from pprint import pprint
 
+
 # Connect to the database file
+
+
+class SalesData:
+    def __init__(self):
+        self.df = pd.DataFrame()   
+        self.results = []                   
 
 def querry_sales_data():
     with duckdb.connect("src/sales_timeseries.db",read_only=True) as con:
@@ -12,6 +19,8 @@ def querry_sales_data():
     # print(con.execute("SELECT COUNT(*) FROM sales_data").fetchall())
         #convert to df
         df = pd.DataFrame(results, columns=[desc[0] for desc in con.description])
+        #print all columns
+        print(df['date'], df['product_name'], df['units_sold'], df['unit_price_sgd'], df['total_amount_per_product_sgd'], df['receipt_total_sgd'], df['country'], df['city'], df['income'])
         
 
         #df['date'] = pd.to_datetime(df['date'], format='%Y-%m-%d %H:%M:%S')
@@ -19,28 +28,33 @@ def querry_sales_data():
         
     # print("\n=== Sample Data ===")
     # df = con.execute("SELECT age,customer_id,gender  FROM sales_data").df()
-        print(df)
+#       print(df)
     # #print customer id , age, and sales for each age group
     # 
     # #print(df['customer_number'][(df['age'] > 25) & (df['age'] <= 50)])
     # print(df['age'][(df['age'] > 25) & (df['age'] <= 50)])
     # print(df['total_amount_per_product_sgd'][(df['age'] > 25) & (df['age'] <= 50)])
 
-def querry_parameters():
-    with duckdb.connect("src/parameter.db",read_only=True) as con:
-        con.execute("PRAGMA show_tables").fetchall()
-        print("TABLE = parameters")
-        results = con.execute("SELECT * FROM parameters").fetchall()
-        df = pd.DataFrame(results, columns=[desc[0] for desc in con.description])
-        pprint(df)
+ #   def querry_parameters(self):
+ #       with duckdb.connect("src/parameters.db",read_only=True) as con:
+ #           con.execute("PRAGMA show_tables").fetchall()
+ #           print("TABLE = parameters")
+ #           self.results = con.execute("SELECT * FROM parameters").fetchall()
+ #           self.df = pd.DataFrame(self.results, columns=[desc[0] for desc in con.description])
+ #           pprint(self.df)
+          
     
     
 def main():
-    #querry_sales_data()
-    querry_parameters()
+   df = SalesData()
+   df.querry_parameters()
+  # pprint(df)
+
+
     
 if __name__ == "__main__":
-    main()
+    #main()
+    querry_sales_data()
     
     
     

@@ -7,6 +7,7 @@ from tqdm import tqdm
 import os
 import sys
 from pprint import pprint
+from load_csv_to_df import load_csv_to_df
 
 
 OUTPUT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))  # Ensure OUTPUT_ROOT points to 'csvanalyzer' folder
@@ -99,12 +100,116 @@ def generate_initial_data(start_iteration:str,end_iteration:str,chunks:int=100_0
                          'Product Exchange'
                         ]
     
-    # Initialize database
+    # Database tasks moved outside the loop
+    print("💾 Database will be initialized after data generation.")
+    
+    # Process in chunks
+    customer_id = 100001
+    receipt_id = 200001
+    customer_ages = {}
+    
+    # Process data in chunks
+    all_transactions = []
+    for chunk_idx in range(chunks):
+        chunk_start = chunk_idx * chunk_size
+        chunk_end = (chunk_idx + 1) * chunk_size if chunk_idx < chunks - 1 else total_days
+        
+        # Get date range for this chunk
+        date_chunk = full_range[chunk_start:chunk_end]
+        
+        print(f"\n🔄 Processing chunk {chunk_idx+1}/{chunks} ({len(date_chunk)} days)")
+        
+        # Generate transactions for this chunk
+        transactions = []
+        
+    for date in tqdm(date_chunk, desc=f"Chunk {chunk_idx+1}/{chunks}", total=(pd.to_datetime(end_date).year - pd.to_datetime(start_date).year) + 1):
+            # tqdm progress bar now reflects the total number of years between start_date and end_date
+            
+            
+            
+            ## Number of receipts per day
+            #day_of_week = date.weekday()
+            #if day_of_week >= 5:  # Weekend
+            #    num_receipts = np.random.randint(20, 40)
+            #else:  # Weekday
+            #    num_receipts = np.random.randint(30, 60)
+            
+            ## Generate receipts logic (same as before)
+            #for receipt in range(num_receipts):
+                # Assign age to customer if not already assigned
+               #
+                    # Realistic age distribution: more customers in 25-45 range
+        age_ranges = [18, 25, 35, 45, 55, 65, 75]
+        age_weights = [0.05, 0.20, 0.25, 0.25, 0.15, 0.08, 0.02]
+        age_range_start = np.random.choice(age_ranges, p=age_weights)
+        age = np.random.randint(age_range_start, min(age_range_start + 10, 80))
+        city = np.random.choice([city['name'] for city in cities])
+        selected_city = next(item for item in cities if item['name'] == city)
+        country_id = selected_city['country_id']
+        country = selected_city['country']
+        transaction_type = transaction_types[np.random.choice([0,1,2], p=[0.95,0.025,0.025])]
+        incomes =[30_000,40_000,50_000,60_000,70_000,80_000,90_000,100_000,120_000,150_000,200_000]
+        customer_income = int(np.random.choice(range(min(incomes), max(incomes))))
+        customer_ages[customer_id] = customer_income
+        product_id =1
+        product = np.random.choice([p['product_name'] for p in products])
+             #  # Number of items per receipt
+             #  items_per_receipt = np.random.choice([1, 2, 3, 4], p=[0.4, 0.3, 0.2, 0.1])
+             #  selected_products = np.random.choice(len(products), size=items_per_receipt, replace=False)
+                
+            #    receipt_total = 0
+                
+             
+        
+        units_sold = np.random.randint(1, 14)  # 1-3 units per item
+        unit_price =  np.random.choice([2345,3398,1234,2234,678,890,456,234,567,890,345,1234,5678,2345 ,3787 ])
+        #unit_price =  np.random.choice([p['unit_price'] for p in products])    
+        total_amount_per_product = units_sold * unit_price
+        receipt_total = 0
+                    
+                    # Add hour variation throughout the day
+        hour = np.random.randint(6, 22)  # Store hours 6 AM to 10 PM
+        transaction_datetime = date + timedelta(hours=hour, minutes=np.random.randint(0, 60))
+        transaction_id = np.random.randint(1000000, 9999999)    
+        transactions.append({
+                        'date': transaction_datetime,
+                        'transaction_id': transaction_id,
+                        'transaction_desc': transaction_type,
+                        'customer_number': customer_id,
+                        'age': age,
+                        'gender': np.random.choice(genders),
+                        'receipt_number': receipt_id,
+                        'product_id': product_id,
+                        'product_name': product,
+                        'units_sold': units_sold,
+                        'unit_price_sgd': round(unit_price, 2),
+                        'total_amount_per_product_sgd': round(total_amount_per_product, 2),
+                        'receipt_total_sgd': 0,  # Will be filled later
+                        'country_id': 11,
+                        'country': country,
+                        'city': city,
+                        'income': customer_income
+                    })
+                
+                # Update receipt total for all items in this receipt
+              #  receipt_start_idx = len(transactions) - items_per_receipt
+             #  for i in range(receipt_start_idx, len(transactions)):
+             #      transactions[i]['receipt_total_sgd'] = round(receipt_total, 2)
+                
+        customer_id += 1
+        receipt_id += 1
+                
+            
+            # After every 10 days, save to database to avoid memory issues
+    if len(transactions) > 1_500_000 or date == date_chunk[-1]:
+        all_transactions.extend(transactions)
+        transactions = []  # Clear for next batch
+    print(f"✅ Chunk {chunk_idx+1}/{chunks} completed")
+    
+    # After all chunks, process and insert into database
+    print("\n💾 Initializing and saving to database...")
     con = duckdb.connect(database=SALES_TIMESERIES_DB, read_only=False)
     con.execute("DROP TABLE IF EXISTS sales_data")
-    print("💾 Database initialized")
-    
-    # Create table schema first
     schema_sql = """
     CREATE TABLE sales_data (
         date varchar,
@@ -127,212 +232,33 @@ def generate_initial_data(start_iteration:str,end_iteration:str,chunks:int=100_0
     )
     """
     con.execute(schema_sql)
-    
-    # Process in chunks
-    customer_id = 100001
-    receipt_id = 200001
-    customer_ages = {}
-    
-    # Process data in chunks
-    for chunk_idx in range(chunks):
-        chunk_start = chunk_idx * chunk_size
-        chunk_end = (chunk_idx + 1) * chunk_size if chunk_idx < chunks - 1 else total_days
-        
-        # Get date range for this chunk
-        date_chunk = full_range[chunk_start:chunk_end]
-        
-        print(f"\n🔄 Processing chunk {chunk_idx+1}/{chunks} ({len(date_chunk)} days)")
-        
-        # Generate transactions for this chunk
-        transactions = []
-        
-        for date in tqdm(date_chunk, desc=f"Chunk {chunk_idx+1}/{chunks}", total=(pd.to_datetime(end_date).year - pd.to_datetime(start_date).year) + 1):
-            # tqdm progress bar now reflects the total number of years between start_date and end_date
-            
-            
-            
-            # Number of receipts per day
-            day_of_week = date.weekday()
-            if day_of_week >= 5:  # Weekend
-                num_receipts = np.random.randint(20, 40)
-            else:  # Weekday
-                num_receipts = np.random.randint(30, 60)
-            
-            # Generate receipts logic (same as before)
-            for receipt in range(num_receipts):
-                # Assign age to customer if not already assigned
-                if customer_id not in customer_ages:
-                    # Realistic age distribution: more customers in 25-45 range
-                    age_ranges = [18, 25, 35, 45, 55, 65, 75]
-                    age_weights = [0.05, 0.20, 0.25, 0.25, 0.15, 0.08, 0.02]
-                    age_range_start = np.random.choice(age_ranges, p=age_weights)
-                    customer_ages[customer_id] = np.random.randint(age_range_start, min(age_range_start + 10, 80))
-                    city = np.random.choice([city['name'] for city in cities])
-                    selected_city = next(item for item in cities if item['name'] == city)
-                    country_id = selected_city['country_id']
-                    country = selected_city['country']
-                    transaction_type = transaction_types[np.random.choice([0,1,2], p=[0.95,0.025,0.025])]
-                    incomes =[30_000,40_000,50_000,60_000,70_000,80_000,90_000,100_000,120_000,150_000,200_000]
-                    customer_income = np.random.choice(range(min(incomes),max(incomes)),1)
-                    customer_ages[customer_id] = customer_income
-
-                # Number of items per receipt
-                items_per_receipt = np.random.choice([1, 2, 3, 4], p=[0.4, 0.3, 0.2, 0.1])
-                selected_products = np.random.choice(len(products), size=items_per_receipt, replace=False)
-                
-                receipt_total = 0
-                
-                for product_idx in selected_products:
-                    product = products[product_idx]
-                    units_sold = np.random.randint(1, 4)  # 1-3 units per item
-                    
-                    # Add some price variation (±10%)
-                    unit_price = product['unit_price'] * np.random.uniform(0.9, 1.1)
-                    
-                    total_amount_per_product = units_sold * unit_price
-                    receipt_total += total_amount_per_product
-                    
-                    # Add hour variation throughout the day
-                    hour = np.random.randint(6, 22)  # Store hours 6 AM to 10 PM
-                    transaction_datetime = date + timedelta(hours=hour, minutes=np.random.randint(0, 60))
-                    transaction_id = np.random.randint(1000000, 9999999)    
-                    transactions.append({
-                        'date': transaction_datetime,
-                        'transaction_id': transaction_id,
-                        'transaction_desc': transaction_type,
-                        'customer_number': customer_id,
-                        'age': customer_ages[customer_id],
-                        'gender': np.random.choice(genders),
-                        'receipt_number': receipt_id,
-                        'product_id': product['product_id'],
-                        'product_name': product['product_name'],
-                        'units_sold': units_sold,
-                        'unit_price_sgd': round(unit_price, 2),
-                        'total_amount_per_product_sgd': round(total_amount_per_product, 2),
-                        'receipt_total_sgd': 0,  # Will be filled later
-                        'country_id': country_id,
-                        'country': country,
-                        'city': city,
-                        'income': customer_income
-                    })
-                
-                # Update receipt total for all items in this receipt
-                receipt_start_idx = len(transactions) - items_per_receipt
-                for i in range(receipt_start_idx, len(transactions)):
-                    transactions[i]['receipt_total_sgd'] = round(receipt_total, 2)
-                
-                customer_id += 1
-                receipt_id += 1
-                
-            
-            # After every 10 days, save to database to avoid memory issues
-            if len(transactions) > 1_500_000 or date == date_chunk[-1]:
-                print(f"Saving {len(transactions)}, records to database...")
-                df_chunk = pd.DataFrame(transactions)
-                
-                # Log the schema of df_view
-                print("\n🔍 DataFrame schema before insertion:")
-                print(df_chunk.dtypes)
-
-                # Log the first few rows to identify problematic columns
-                print("\n🔍 DataFrame preview before type conversion:")
-                print(df_chunk.head())
-
-                # Handle stringified dictionaries in columns
-                for column in df_chunk.columns:
-                    if df_chunk[column].apply(lambda x: isinstance(x, str) and x.startswith('{') and x.endswith('}')).any():
-                        print(f"⚠️ Column '{column}' contains stringified dictionaries. Parsing and extracting values.")
-                        df_chunk[column] = df_chunk[column].apply(
-                            lambda x: json.loads(x).get('M', x) if isinstance(x, str) and x.startswith('{') and x.endswith('}') else x
-                        )
-
-                # Refine dictionary handling in the 'gender' column
-                # Ensure 'gender' column contains CHARACTER MALE OR FEMALE
-                #if df_chunk['gender'].apply(lambda x: isinstance(x, dict)).any():
-                #  
-                #    df_chunk['gender'] = df_chunk['gender'].apply(lambda x: x.get('M', 0) if isinstance(x, dict) else x)
-                
-            
-                #if df_chunk['country_id'].apply(lambda x: isinstance(x, str) and x.startswith('C')).any():
-                #    print("⚠️ Refining 'country_id' column preprocessing to extract integer values.")
-                #    df_chunk['country_id'] = df_chunk['country_id'].apply(lambda x: int(x[1:]) if isinstance(x, str) and x.startswith('C') else x)
-
-            
-                #for column in df_chunk.select_dtypes(include=['object']).columns:
-                #    df_chunk[column] = df_chunk[column].astype(str)
-
-              
-                for column in df_chunk.select_dtypes(include=['object']).columns:
-                    df_chunk[column] = df_chunk[column].apply(lambda x: ''.join(filter(str.isprintable, str(x))) if isinstance(x, str) else x)
-
-                # Correct data generation and insertion to DuckDB
-                dtype_mapping = {
-                    'int64': 'BIGINT',
-                    'float64': 'DOUBLE',
-                    'object': 'VARCHAR',
-                    'string': 'VARCHAR',
-                    'NoneType': 'VARCHAR',
-                    'datetime64[ns]': 'TIMESTAMP',
-                    'Boolean': 'BOOLEAN'
-                }
-                try:
-                    # Dynamically create the table schema based on DataFrame dtypes
-                    df_dtypes = {col: dtype_mapping.get(str(dtype), 'VARCHAR') for col, dtype in df_chunk.dtypes.items()}
-                    schema_sql = "CREATE TABLE IF NOT EXISTS data (" + ", ".join(
-                        f'"{col}" {dtype}' for col, dtype in df_dtypes.items() if col not in ['discount_period', 'discount_percentage', 'discount_applied']
-                    ) + ")"
-                    print("🔍 Generated schema:")
-                    print(schema_sql)
-                    con.execute(schema_sql)
-
-                    # Drop discount-related fields from the DataFrame
-                    df_chunk = df_chunk.drop(columns=['discount_period', 'discount_percentage', 'discount_applied'], errors='ignore')
-
-                    # Convert nullable columns to use pd.NA for proper null handling
-                    nullable_columns = df_chunk.columns[df_chunk.isnull().any()].tolist()
-                    for column in nullable_columns:
-                        df_chunk[column] = df_chunk[column].apply(lambda x: pd.NA if x == 'None' else x)
-
-                    # Explicitly cast nullable columns to appropriate nullable data types
-                    for column in nullable_columns:
-                        if df_chunk[column].dtype == 'object':
-                            df_chunk[column] = df_chunk[column].astype('Int64')
-
-                    # Insert data into DuckDB
-                    con.register('df_view', df_chunk)
-                    insert_query = "INSERT INTO data SELECT * FROM df_view"
-                    con.execute(insert_query)
-                
-
-                except Exception as e:
-                    raise RuntimeError(f"❌ Error during database insertion: {e}")
-                
-           
-        transactions = []  # Clear for next batch
-        print(f"✅ Chunk {chunk_idx+1}/{chunks} completed")
-    
+    df_all = pd.DataFrame(all_transactions)
+    # Clean up and type conversions as before
+    for column in df_all.select_dtypes(include=['object']).columns:
+        df_all[column] = df_all[column].apply(lambda x: ''.join(filter(str.isprintable, str(x))) if isinstance(x, str) else x)
+    # Insert all data
+    con.register('df_view', df_all)
+    insert_query = "INSERT INTO sales_data SELECT * FROM df_view"
+    con.execute(insert_query)
     # Create indexes after all data is inserted
-    print("\n📊 Creating indexes...")
-    con.execute("CREATE INDEX idx_date ON data (date)")
-    con.execute("CREATE INDEX idx_customer ON data (customer_number)")
-    con.execute("CREATE INDEX idx_receipt ON data (receipt_number)")
-    con.execute("CREATE INDEX idx_product ON data (product_id)")
-    
+   # print("\n📊 Creating indexes...")
+   # con.execute("CREATE INDEX idx_date ON sales_data (date)")
+   # con.execute("CREATE INDEX idx_customer ON sales_data (customer_number)")
+   # con.execute("CREATE INDEX idx_receipt ON sales_data (receipt_number)")
+   # con.execute("CREATE INDEX idx_product ON sales_data (product_id)")
     # Get statistics about the table
-    print("\n📈 Database statistics:")
-    record_count = con.execute("SELECT COUNT(*) from sales_data").fetchone()[0]
-    revenue = con.execute("SELECT SUM(total_amount_per_product_sgd) from sales_data").fetchone()[0]
-    unique_customers = con.execute("SELECT COUNT(DISTINCT customer_number) from sales_data").fetchone()[0]
-    unique_receipts = con.execute("SELECT COUNT(DISTINCT receipt_number) from sales_data").fetchone()[0]
-    
+  # print("\n📈 Database statistics:")
+  # record_count = con.execute("SELECT COUNT(*) from sales_data").fetchone()[0]
+  # revenue = con.execute("SELECT SUM(total_amount_per_product_sgd) from sales_data").fetchone()[0]
+  # unique_customers = con.execute("SELECT COUNT(DISTINCT customer_number) from sales_data").fetchone()[0]
+  # unique_receipts = con.execute("SELECT COUNT(DISTINCT receipt_number) from sales_data").fetchone()[0]
     con.close()
-    
-    print("\n✅ Data saved to sales_timeseries.db database file")
-    print(f"📊 Total records: {record_count:,}")
-    print(f"💰 Total revenue: SGD ${revenue:,.2f}")
-    print(f"👥 Unique customers: {unique_customers:,}")
-    print(f"🧾 Unique receipts: {unique_receipts:,}")
-    print("🎉 Database creation complete!")
+  # print("\n✅ Data saved to sales_timeseries.db database file")
+  # print(f"📊 Total records: {record_count:,}")
+  # print(f"💰 Total revenue: SGD ${revenue:,.2f}")
+  # print(f"👥 Unique customers: {unique_customers:,}")
+  # print(f"🧾 Unique receipts: {unique_receipts:,}")
+  # print("🎉 Database creation complete!")
 
 def main():
     print("🏪 Retail TimeSeries Database Generator")
@@ -353,7 +279,7 @@ def main():
                 os.remove(SALES_TIMESERIES_DB)
                 print("🗑️  Deleted existing database")
             print("⚡ Generating new database...")
-            generate_initial_data(start_iteration='1990-01-01', end_iteration='2025-09-02', chunks=100000)
+            generate_initial_data(start_iteration='1900-01-01', end_iteration='2025-09-02', chunks=100000)
             print("✅ Database generation complete!")
         elif choice == '2':
             try:
@@ -391,4 +317,5 @@ if __name__ == "__main__":
    #mydict =  globals()
    #pprint(mydict)
     main()
-    
+   #df = load_csv_to_df("src/sales_timeseries.csv")
+   #print(df)
