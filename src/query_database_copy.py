@@ -16,11 +16,14 @@ class SalesData:
 
 
 def querry_sales_data():
-    with duckdb.connect("src/sales_timeseries.db",read_only=True) as con:
+    with duckdb.connect("src/sales_timeseries.db",read_only=False) as con:
         # Query the data        
         print("TABLE = sales_data")
-        results = con.execute("SELECT * FROM sales_data").fetchall()
-    # print(con.execute("SELECT COUNT(*) FROM sales_data").fetchall())
+        results = con.execute("SELECT * FROM sales_data ").fetchall()
+       # con.execute("CREATE INDEX income ON sales_data (date)")
+        #con.execute("CREATE INDEX idx_customer ON sales_data (customer_number)")
+        #con.execute("CREATE INDEX idx_receipt ON sales_data (product_name)")
+        #con.execute("CREATE INDEX idx_product ON sales_data (transaction_id)")
         #convert to df
         df = pd.DataFrame(results, columns=[desc[0] for desc in con.description])
         
@@ -48,8 +51,8 @@ def querry_parameters():
     
     
 def main():
-    #querry_sales_data()
-    querry_parameters()
+    querry_sales_data()
+    #querry_parameters()
     
 if __name__ == "__main__":
     main()
