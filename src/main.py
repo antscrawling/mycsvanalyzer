@@ -294,6 +294,7 @@ def split_date_range(start_date, end_date, num_parts):
  
     
 def main():
+    df_all = load_dataset()  # Initialize df_all to avoid reference issues later
     print("🏪 Retail TimeSeries Database Generator")
     print("=" * 40)
 
@@ -331,16 +332,23 @@ def main():
             print("✅ Database generation complete!")
         elif choice == '2':
             print("🔄 Loading dataset from pickle file...")
-            df_all = load_dataset()
+            if not os.path.exists('src/sales_timeseries.pickle'):
+                print("❌ sales_timeseries.pickle file not found. Please generate the dataset first.")
+                 # Initialize an empty DataFrame
+            else:
+                with open('src/sales_timeseries.pickle', 'rb') as f:
+                    df_all = pickle.load(f)
             print('Data loaded successfully from pickle file.')
-            print(df_all.head())
-             
+        
+        
         elif choice == '3':
             print('💾 Saving dataset to DuckDB database...')
             if os.path.exists(SALES_TIMESERIES_DB):
                 os.remove(SALES_TIMESERIES_DB)
                 print("🗑️  Deleted existing database")
-            initialize_database(df_all)
+            else:
+                load_dataset()
+            initialize_database()
             save_to_duckdb(df_all)
 
         elif choice == '4':
