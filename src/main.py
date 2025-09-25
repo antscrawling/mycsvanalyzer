@@ -327,7 +327,7 @@ def generate_initial_data(start_iteration:str,end_iteration:str, save_to_parquet
         hour = np.random.randint(6, 22)  # Store hours 6 AM to 10 PM
         minute = np.random.randint(0, 60)
         second = np.random.randint(0, 60)
-        for hour_of_day in range(0, 24):  # Simulate every hour of the day
+        for hour_of_day in range(0,23):  # Simulate every hour of the day
             # Adjust the hour calculation to use the loop variable
             transaction_datetime = date + timedelta(hours=hour_of_day, minutes=minute, seconds=second)
             transaction_id = np.random.randint(1000000, 9999999)
@@ -338,7 +338,7 @@ def generate_initial_data(start_iteration:str,end_iteration:str, save_to_parquet
                 'customer_id': str(customer_id),  # Add missing customer_id column
                 'age': age,
                 'gender': np.random.choice(genders),
-                'receipt_number': f'{receipt_id},{transaction_id}',
+                'receipt_number': f'{transaction_id+receipt_id}',
                 'product_id': product_id,
                 'product_name': product,
                 'units_sold': units_sold,
@@ -1404,6 +1404,7 @@ def main():
             display_db_saved_queries()
         elif choice == '0':
             print("👋 Goodbye!")
+            break
         else:
             print("❌ Invalid choice. Please select a valid option.")
 
