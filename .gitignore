@@ -10,3 +10,17 @@ src/sales_timeseries.db.wal
 src/sales_timeseries.csv
 # Virtual environments
 .venv
+src/PARQUET/*.parquet
+*.pickle
+*.parquet
+*.db
+*.csv
+src/sales_timeseries.pickle
+src/sales_timeseries.pickle
+src/sales_timeseries.pickle
+.vs/slnx.sqlite
+.vs/mycsvanalyzer/FileContentIndex/6fd56bef-6b11-40e1-8868-414e352ebf3c.vsidx
+.vs/mycsvanalyzer/v17/.wsuo
+src/sales_timeseries.pickle
+src/sales_timeseries.pickle
+src/sales_timeseries.pickle

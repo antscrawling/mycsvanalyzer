@@ -1,0 +1,1106 @@
+[
+  {
+    "chunk_id": 0,
+    "file_path": "c:\\Users\\ants_\\Documents\\mycsvanalyzer\\src\\PARQUET\\batch_20250925_201806.parquet",
+    "rows": 143688,
+    "created_at": "20250925_201806"
+  },
+  {
+    "chunk_id": 1,
+    "file_path": "c:\\Users\\ants_\\Documents\\mycsvanalyzer\\src\\PARQUET\\batch_20250925_201808.parquet",
+    "rows": 143688,
+    "created_at": "20250925_201808"
+  },
+  {
+    "chunk_id": 2,
+    "file_path": "c:\\Users\\ants_\\Documents\\mycsvanalyzer\\src\\PARQUET\\batch_20250925_201810.parquet",
+    "rows": 143688,
+    "created_at": "20250925_201810"
+  },
+  {
+    "chunk_id": 3,
+    "file_path": "c:\\Users\\ants_\\Documents\\mycsvanalyzer\\src\\PARQUET\\batch_20250925_201812.parquet",
+    "rows": 143688,
+    "created_at": "20250925_201812"
+  },
+  {
+    "chunk_id": 4,
+    "file_path": "c:\\Users\\ants_\\Documents\\mycsvanalyzer\\src\\PARQUET\\batch_20250925_202004.parquet",
+    "rows": 143688,
+    "created_at": "20250925_202004"
+  },
+  {
+    "chunk_id": 5,
+    "file_path": "c:\\Users\\ants_\\Documents\\mycsvanalyzer\\src\\PARQUET\\batch_20250925_202005.parquet",
+    "rows": 143688,
+    "created_at": "20250925_202005"
+  },
+  {
+    "chunk_id": 6,
+    "file_path": "c:\\Users\\ants_\\Documents\\mycsvanalyzer\\src\\PARQUET\\batch_20250925_202013.parquet",
+    "rows": 143688,
+    "created_at": "20250925_202013"
+  },
+  {
+    "chunk_id": 7,
+    "file_path": "c:\\Users\\ants_\\Documents\\mycsvanalyzer\\src\\PARQUET\\batch_20250925_202015.parquet",
+    "rows": 143688,
+    "created_at": "20250925_202015"
+  },
+  {
+    "chunk_id": 8,
+    "file_path": "c:\\Users\\ants_\\Documents\\mycsvanalyzer\\src\\PARQUET\\batch_20250925_202217.parquet",
+    "rows": 143688,
+    "created_at": "20250925_202217"
+  },
+  {
+    "chunk_id": 9,
+    "file_path": "c:\\Users\\ants_\\Documents\\mycsvanalyzer\\src\\PARQUET\\batch_20250925_202219.parquet",
+    "rows": 143688,
+    "created_at": "20250925_202219"
+  },
+  {
+    "chunk_id": 10,
+    "file_path": "c:\\Users\\ants_\\Documents\\mycsvanalyzer\\src\\PARQUET\\batch_20250925_202221.parquet",
+    "rows": 143688,
+    "created_at": "20250925_202221"
+  },
+  {
+    "chunk_id": 11,
+    "file_path": "c:\\Users\\ants_\\Documents\\mycsvanalyzer\\src\\PARQUET\\batch_20250925_202226.parquet",
+    "rows": 143688,
+    "created_at": "20250925_202226"
+  },
+  {
+    "chunk_id": 12,
+    "file_path": "c:\\Users\\ants_\\Documents\\mycsvanalyzer\\src\\PARQUET\\batch_20250925_202413.parquet",
+    "rows": 143688,
+    "created_at": "20250925_202413"
+  },
+  {
+    "chunk_id": 13,
+    "file_path": "c:\\Users\\ants_\\Documents\\mycsvanalyzer\\src\\PARQUET\\batch_20250925_202415.parquet",
+    "rows": 143688,
+    "created_at": "20250925_202415"
+  },
+  {
+    "chunk_id": 14,
+    "file_path": "c:\\Users\\ants_\\Documents\\mycsvanalyzer\\src\\PARQUET\\batch_20250925_202417.parquet",
+    "rows": 143688,
+    "created_at": "20250925_202417"
+  },
+  {
+    "chunk_id": 15,
+    "file_path": "c:\\Users\\ants_\\Documents\\mycsvanalyzer\\src\\PARQUET\\batch_20250925_202429.parquet",
+    "rows": 143688,
+    "created_at": "20250925_202429"
+  },
+  {
+    "chunk_id": 16,
+    "file_path": "c:\\Users\\ants_\\Documents\\mycsvanalyzer\\src\\PARQUET\\batch_20250925_202604.parquet",
+    "rows": 143688,
+    "created_at": "20250925_202604"
+  },
+  {
+    "chunk_id": 17,
+    "file_path": "c:\\Users\\ants_\\Documents\\mycsvanalyzer\\src\\PARQUET\\batch_20250925_202615.parquet",
+    "rows": 143688,
+    "created_at": "20250925_202615"
+  },
+  {
+    "chunk_id": 18,
+    "file_path": "c:\\Users\\ants_\\Documents\\mycsvanalyzer\\src\\PARQUET\\batch_20250925_202617.parquet",
+    "rows": 143688,
+    "created_at": "20250925_202617"
+  },
+  {
+    "chunk_id": 19,
+    "file_path": "c:\\Users\\ants_\\Documents\\mycsvanalyzer\\src\\PARQUET\\batch_20250925_202637.parquet",
+    "rows": 143688,
+    "created_at": "20250925_202637"
+  },
+  {
+    "chunk_id": 20,
+    "file_path": "c:\\Users\\ants_\\Documents\\mycsvanalyzer\\src\\PARQUET\\batch_20250925_202808.parquet",
+    "rows": 143688,
+    "created_at": "20250925_202808"
+  },
+  {
+    "chunk_id": 21,
+    "file_path": "c:\\Users\\ants_\\Documents\\mycsvanalyzer\\src\\PARQUET\\batch_20250925_202817.parquet",
+    "rows": 143688,
+    "created_at": "20250925_202817"
+  },
+  {
+    "chunk_id": 22,
+    "file_path": "c:\\Users\\ants_\\Documents\\mycsvanalyzer\\src\\PARQUET\\batch_20250925_202818.parquet",
+    "rows": 143688,
+    "created_at": "20250925_202818"
+  },
+  {
+    "chunk_id": 23,
+    "file_path": "c:\\Users\\ants_\\Documents\\mycsvanalyzer\\src\\PARQUET\\batch_20250925_202833.parquet",
+    "rows": 143688,
+    "created_at": "20250925_202833"
+  },
+  {
+    "chunk_id": 24,
+    "file_path": "c:\\Users\\ants_\\Documents\\mycsvanalyzer\\src\\PARQUET\\batch_20250925_203009.parquet",
+    "rows": 143688,
+    "created_at": "20250925_203009"
+  },
+  {
+    "chunk_id": 25,
+    "file_path": "c:\\Users\\ants_\\Documents\\mycsvanalyzer\\src\\PARQUET\\batch_20250925_203011.parquet",
+    "rows": 143688,
+    "created_at": "20250925_203011"
+  },
+  {
+    "chunk_id": 26,
+    "file_path": "c:\\Users\\ants_\\Documents\\mycsvanalyzer\\src\\PARQUET\\batch_20250925_203013.parquet",
+    "rows": 143688,
+    "created_at": "20250925_203013"
+  },
+  {
+    "chunk_id": 27,
+    "file_path": "c:\\Users\\ants_\\Documents\\mycsvanalyzer\\src\\PARQUET\\batch_20250925_203026.parquet",
+    "rows": 143688,
+    "created_at": "20250925_203026"
+  },
+  {
+    "chunk_id": 28,
+    "file_path": "c:\\Users\\ants_\\Documents\\mycsvanalyzer\\src\\PARQUET\\batch_20250925_203141.parquet",
+    "rows": 143688,
+    "created_at": "20250925_203141"
+  },
+  {
+    "chunk_id": 29,
+    "file_path": "c:\\Users\\ants_\\Documents\\mycsvanalyzer\\src\\PARQUET\\batch_20250925_203203.parquet",
+    "rows": 143688,
+    "created_at": "20250925_203203"
+  },
+  {
+    "chunk_id": 30,
+    "file_path": "c:\\Users\\ants_\\Documents\\mycsvanalyzer\\src\\PARQUET\\batch_20250925_203205.parquet",
+    "rows": 143688,
+    "created_at": "20250925_203205"
+  },
+  {
+    "chunk_id": 31,
+    "file_path": "c:\\Users\\ants_\\Documents\\mycsvanalyzer\\src\\PARQUET\\batch_20250925_203215.parquet",
+    "rows": 143688,
+    "created_at": "20250925_203215"
+  },
+  {
+    "chunk_id": 32,
+    "file_path": "c:\\Users\\ants_\\Documents\\mycsvanalyzer\\src\\PARQUET\\batch_20250925_203329.parquet",
+    "rows": 143688,
+    "created_at": "20250925_203329"
+  },
+  {
+    "chunk_id": 33,
+    "file_path": "c:\\Users\\ants_\\Documents\\mycsvanalyzer\\src\\PARQUET\\batch_20250925_203340.parquet",
+    "rows": 143688,
+    "created_at": "20250925_203340"
+  },
+  {
+    "chunk_id": 34,
+    "file_path": "c:\\Users\\ants_\\Documents\\mycsvanalyzer\\src\\PARQUET\\batch_20250925_203342.parquet",
+    "rows": 143688,
+    "created_at": "20250925_203342"
+  },
+  {
+    "chunk_id": 35,
+    "file_path": "c:\\Users\\ants_\\Documents\\mycsvanalyzer\\src\\PARQUET\\batch_20250925_203408.parquet",
+    "rows": 143688,
+    "created_at": "20250925_203408"
+  },
+  {
+    "chunk_id": 36,
+    "file_path": "c:\\Users\\ants_\\Documents\\mycsvanalyzer\\src\\PARQUET\\batch_20250925_203538.parquet",
+    "rows": 143688,
+    "created_at": "20250925_203538"
+  },
+  {
+    "chunk_id": 37,
+    "file_path": "c:\\Users\\ants_\\Documents\\mycsvanalyzer\\src\\PARQUET\\batch_20250925_203547.parquet",
+    "rows": 143688,
+    "created_at": "20250925_203547"
+  },
+  {
+    "chunk_id": 38,
+    "file_path": "c:\\Users\\ants_\\Documents\\mycsvanalyzer\\src\\PARQUET\\batch_20250925_203603.parquet",
+    "rows": 143688,
+    "created_at": "20250925_203603"
+  },
+  {
+    "chunk_id": 39,
+    "file_path": "c:\\Users\\ants_\\Documents\\mycsvanalyzer\\src\\PARQUET\\batch_20250925_203625.parquet",
+    "rows": 143688,
+    "created_at": "20250925_203625"
+  },
+  {
+    "chunk_id": 40,
+    "file_path": "c:\\Users\\ants_\\Documents\\mycsvanalyzer\\src\\PARQUET\\batch_20250925_203746.parquet",
+    "rows": 143688,
+    "created_at": "20250925_203746"
+  },
+  {
+    "chunk_id": 41,
+    "file_path": "c:\\Users\\ants_\\Documents\\mycsvanalyzer\\src\\PARQUET\\batch_20250925_203757.parquet",
+    "rows": 143688,
+    "created_at": "20250925_203757"
+  },
+  {
+    "chunk_id": 42,
+    "file_path": "c:\\Users\\ants_\\Documents\\mycsvanalyzer\\src\\PARQUET\\batch_20250925_203800.parquet",
+    "rows": 143688,
+    "created_at": "20250925_203800"
+  },
+  {
+    "chunk_id": 43,
+    "file_path": "c:\\Users\\ants_\\Documents\\mycsvanalyzer\\src\\PARQUET\\batch_20250925_203830.parquet",
+    "rows": 143688,
+    "created_at": "20250925_203830"
+  },
+  {
+    "chunk_id": 44,
+    "file_path": "c:\\Users\\ants_\\Documents\\mycsvanalyzer\\src\\PARQUET\\batch_20250925_203940.parquet",
+    "rows": 143688,
+    "created_at": "20250925_203940"
+  },
+  {
+    "chunk_id": 45,
+    "file_path": "c:\\Users\\ants_\\Documents\\mycsvanalyzer\\src\\PARQUET\\batch_20250925_203950.parquet",
+    "rows": 143688,
+    "created_at": "20250925_203950"
+  },
+  {
+    "chunk_id": 46,
+    "file_path": "c:\\Users\\ants_\\Documents\\mycsvanalyzer\\src\\PARQUET\\batch_20250925_203954.parquet",
+    "rows": 143688,
+    "created_at": "20250925_203954"
+  },
+  {
+    "chunk_id": 47,
+    "file_path": "c:\\Users\\ants_\\Documents\\mycsvanalyzer\\src\\PARQUET\\batch_20250925_204041.parquet",
+    "rows": 143688,
+    "created_at": "20250925_204041"
+  },
+  {
+    "chunk_id": 48,
+    "file_path": "c:\\Users\\ants_\\Documents\\mycsvanalyzer\\src\\PARQUET\\batch_20250925_204128.parquet",
+    "rows": 143688,
+    "created_at": "20250925_204128"
+  },
+  {
+    "chunk_id": 49,
+    "file_path": "c:\\Users\\ants_\\Documents\\mycsvanalyzer\\src\\PARQUET\\batch_20250925_204135.parquet",
+    "rows": 143688,
+    "created_at": "20250925_204135"
+  },
+  {
+    "chunk_id": 50,
+    "file_path": "c:\\Users\\ants_\\Documents\\mycsvanalyzer\\src\\PARQUET\\batch_20250925_204140.parquet",
+    "rows": 143688,
+    "created_at": "20250925_204140"
+  },
+  {
+    "chunk_id": 51,
+    "file_path": "c:\\Users\\ants_\\Documents\\mycsvanalyzer\\src\\PARQUET\\batch_20250925_204213.parquet",
+    "rows": 143688,
+    "created_at": "20250925_204213"
+  },
+  {
+    "chunk_id": 52,
+    "file_path": "c:\\Users\\ants_\\Documents\\mycsvanalyzer\\src\\PARQUET\\batch_20250925_204312.parquet",
+    "rows": 143688,
+    "created_at": "20250925_204312"
+  },
+  {
+    "chunk_id": 53,
+    "file_path": "c:\\Users\\ants_\\Documents\\mycsvanalyzer\\src\\PARQUET\\batch_20250925_204321.parquet",
+    "rows": 143688,
+    "created_at": "20250925_204321"
+  },
+  {
+    "chunk_id": 54,
+    "file_path": "c:\\Users\\ants_\\Documents\\mycsvanalyzer\\src\\PARQUET\\batch_20250925_204324.parquet",
+    "rows": 143688,
+    "created_at": "20250925_204324"
+  },
+  {
+    "chunk_id": 55,
+    "file_path": "c:\\Users\\ants_\\Documents\\mycsvanalyzer\\src\\PARQUET\\batch_20250925_204400.parquet",
+    "rows": 143688,
+    "created_at": "20250925_204400"
+  },
+  {
+    "chunk_id": 56,
+    "file_path": "c:\\Users\\ants_\\Documents\\mycsvanalyzer\\src\\PARQUET\\batch_20250925_204456.parquet",
+    "rows": 143688,
+    "created_at": "20250925_204456"
+  },
+  {
+    "chunk_id": 57,
+    "file_path": "c:\\Users\\ants_\\Documents\\mycsvanalyzer\\src\\PARQUET\\batch_20250925_204508.parquet",
+    "rows": 143688,
+    "created_at": "20250925_204508"
+  },
+  {
+    "chunk_id": 58,
+    "file_path": "c:\\Users\\ants_\\Documents\\mycsvanalyzer\\src\\PARQUET\\batch_20250925_204512.parquet",
+    "rows": 143688,
+    "created_at": "20250925_204512"
+  },
+  {
+    "chunk_id": 59,
+    "file_path": "c:\\Users\\ants_\\Documents\\mycsvanalyzer\\src\\PARQUET\\batch_20250925_204550.parquet",
+    "rows": 143688,
+    "created_at": "20250925_204550"
+  },
+  {
+    "chunk_id": 60,
+    "file_path": "c:\\Users\\ants_\\Documents\\mycsvanalyzer\\src\\PARQUET\\batch_20250925_204721.parquet",
+    "rows": 143688,
+    "created_at": "20250925_204721"
+  },
+  {
+    "chunk_id": 61,
+    "file_path": "c:\\Users\\ants_\\Documents\\mycsvanalyzer\\src\\PARQUET\\batch_20250925_204722.parquet",
+    "rows": 143688,
+    "created_at": "20250925_204722"
+  },
+  {
+    "chunk_id": 62,
+    "file_path": "c:\\Users\\ants_\\Documents\\mycsvanalyzer\\src\\PARQUET\\batch_20250925_204724.parquet",
+    "rows": 143688,
+    "created_at": "20250925_204724"
+  },
+  {
+    "chunk_id": 63,
+    "file_path": "c:\\Users\\ants_\\Documents\\mycsvanalyzer\\src\\PARQUET\\batch_20250925_204740.parquet",
+    "rows": 143688,
+    "created_at": "20250925_204740"
+  },
+  {
+    "chunk_id": 64,
+    "file_path": "c:\\Users\\ants_\\Documents\\mycsvanalyzer\\src\\PARQUET\\batch_20250925_204829.parquet",
+    "rows": 143688,
+    "created_at": "20250925_204829"
+  },
+  {
+    "chunk_id": 65,
+    "file_path": "c:\\Users\\ants_\\Documents\\mycsvanalyzer\\src\\PARQUET\\batch_20250925_204911.parquet",
+    "rows": 143688,
+    "created_at": "20250925_204911"
+  },
+  {
+    "chunk_id": 66,
+    "file_path": "c:\\Users\\ants_\\Documents\\mycsvanalyzer\\src\\PARQUET\\batch_20250925_204912.parquet",
+    "rows": 143688,
+    "created_at": "20250925_204912"
+  },
+  {
+    "chunk_id": 67,
+    "file_path": "c:\\Users\\ants_\\Documents\\mycsvanalyzer\\src\\PARQUET\\batch_20250925_204932.parquet",
+    "rows": 143688,
+    "created_at": "20250925_204932"
+  },
+  {
+    "chunk_id": 68,
+    "file_path": "c:\\Users\\ants_\\Documents\\mycsvanalyzer\\src\\PARQUET\\batch_20250925_205016.parquet",
+    "rows": 143688,
+    "created_at": "20250925_205016"
+  },
+  {
+    "chunk_id": 69,
+    "file_path": "c:\\Users\\ants_\\Documents\\mycsvanalyzer\\src\\PARQUET\\batch_20250925_205057.parquet",
+    "rows": 143688,
+    "created_at": "20250925_205057"
+  },
+  {
+    "chunk_id": 70,
+    "file_path": "c:\\Users\\ants_\\Documents\\mycsvanalyzer\\src\\PARQUET\\batch_20250925_205058.parquet",
+    "rows": 143688,
+    "created_at": "20250925_205058"
+  },
+  {
+    "chunk_id": 71,
+    "file_path": "c:\\Users\\ants_\\Documents\\mycsvanalyzer\\src\\PARQUET\\batch_20250925_205121.parquet",
+    "rows": 143688,
+    "created_at": "20250925_205121"
+  },
+  {
+    "chunk_id": 72,
+    "file_path": "c:\\Users\\ants_\\Documents\\mycsvanalyzer\\src\\PARQUET\\batch_20250925_205204.parquet",
+    "rows": 143688,
+    "created_at": "20250925_205204"
+  },
+  {
+    "chunk_id": 73,
+    "file_path": "c:\\Users\\ants_\\Documents\\mycsvanalyzer\\src\\PARQUET\\batch_20250925_205240.parquet",
+    "rows": 143688,
+    "created_at": "20250925_205240"
+  },
+  {
+    "chunk_id": 74,
+    "file_path": "c:\\Users\\ants_\\Documents\\mycsvanalyzer\\src\\PARQUET\\batch_20250925_205246.parquet",
+    "rows": 143688,
+    "created_at": "20250925_205246"
+  },
+  {
+    "chunk_id": 75,
+    "file_path": "c:\\Users\\ants_\\Documents\\mycsvanalyzer\\src\\PARQUET\\batch_20250925_205453.parquet",
+    "rows": 143688,
+    "created_at": "20250925_205453"
+  },
+  {
+    "chunk_id": 76,
+    "file_path": "c:\\Users\\ants_\\Documents\\mycsvanalyzer\\src\\PARQUET\\batch_20250925_205455.parquet",
+    "rows": 143688,
+    "created_at": "20250925_205455"
+  },
+  {
+    "chunk_id": 77,
+    "file_path": "c:\\Users\\ants_\\Documents\\mycsvanalyzer\\src\\PARQUET\\batch_20250925_205456.parquet",
+    "rows": 143688,
+    "created_at": "20250925_205456"
+  },
+  {
+    "chunk_id": 78,
+    "file_path": "c:\\Users\\ants_\\Documents\\mycsvanalyzer\\src\\PARQUET\\batch_20250925_205458.parquet",
+    "rows": 143688,
+    "created_at": "20250925_205458"
+  },
+  {
+    "chunk_id": 79,
+    "file_path": "c:\\Users\\ants_\\Documents\\mycsvanalyzer\\src\\PARQUET\\batch_20250925_205511.parquet",
+    "rows": 143688,
+    "created_at": "20250925_205511"
+  },
+  {
+    "chunk_id": 80,
+    "file_path": "c:\\Users\\ants_\\Documents\\mycsvanalyzer\\src\\PARQUET\\batch_20250925_205640.parquet",
+    "rows": 143688,
+    "created_at": "20250925_205640"
+  },
+  {
+    "chunk_id": 81,
+    "file_path": "c:\\Users\\ants_\\Documents\\mycsvanalyzer\\src\\PARQUET\\batch_20250925_205642.parquet",
+    "rows": 143688,
+    "created_at": "20250925_205642"
+  },
+  {
+    "chunk_id": 82,
+    "file_path": "c:\\Users\\ants_\\Documents\\mycsvanalyzer\\src\\PARQUET\\batch_20250925_205644.parquet",
+    "rows": 143688,
+    "created_at": "20250925_205644"
+  },
+  {
+    "chunk_id": 83,
+    "file_path": "c:\\Users\\ants_\\Documents\\mycsvanalyzer\\src\\PARQUET\\batch_20250925_205659.parquet",
+    "rows": 143688,
+    "created_at": "20250925_205659"
+  },
+  {
+    "chunk_id": 84,
+    "file_path": "c:\\Users\\ants_\\Documents\\mycsvanalyzer\\src\\PARQUET\\batch_20250925_205825.parquet",
+    "rows": 143688,
+    "created_at": "20250925_205825"
+  },
+  {
+    "chunk_id": 85,
+    "file_path": "c:\\Users\\ants_\\Documents\\mycsvanalyzer\\src\\PARQUET\\batch_20250925_205827.parquet",
+    "rows": 143688,
+    "created_at": "20250925_205827"
+  },
+  {
+    "chunk_id": 86,
+    "file_path": "c:\\Users\\ants_\\Documents\\mycsvanalyzer\\src\\PARQUET\\batch_20250925_205828.parquet",
+    "rows": 143688,
+    "created_at": "20250925_205828"
+  },
+  {
+    "chunk_id": 87,
+    "file_path": "c:\\Users\\ants_\\Documents\\mycsvanalyzer\\src\\PARQUET\\batch_20250925_205849.parquet",
+    "rows": 143688,
+    "created_at": "20250925_205849"
+  },
+  {
+    "chunk_id": 88,
+    "file_path": "c:\\Users\\ants_\\Documents\\mycsvanalyzer\\src\\PARQUET\\batch_20250925_210011.parquet",
+    "rows": 143688,
+    "created_at": "20250925_210011"
+  },
+  {
+    "chunk_id": 89,
+    "file_path": "c:\\Users\\ants_\\Documents\\mycsvanalyzer\\src\\PARQUET\\batch_20250925_210013.parquet",
+    "rows": 143688,
+    "created_at": "20250925_210013"
+  },
+  {
+    "chunk_id": 90,
+    "file_path": "c:\\Users\\ants_\\Documents\\mycsvanalyzer\\src\\PARQUET\\batch_20250925_210014.parquet",
+    "rows": 143688,
+    "created_at": "20250925_210014"
+  },
+  {
+    "chunk_id": 91,
+    "file_path": "c:\\Users\\ants_\\Documents\\mycsvanalyzer\\src\\PARQUET\\batch_20250925_210037.parquet",
+    "rows": 143688,
+    "created_at": "20250925_210037"
+  },
+  {
+    "chunk_id": 92,
+    "file_path": "c:\\Users\\ants_\\Documents\\mycsvanalyzer\\src\\PARQUET\\batch_20250925_210422.parquet",
+    "rows": 143688,
+    "created_at": "20250925_210422"
+  },
+  {
+    "chunk_id": 93,
+    "file_path": "c:\\Users\\ants_\\Documents\\mycsvanalyzer\\src\\PARQUET\\batch_20250925_210425.parquet",
+    "rows": 143688,
+    "created_at": "20250925_210425"
+  },
+  {
+    "chunk_id": 94,
+    "file_path": "c:\\Users\\ants_\\Documents\\mycsvanalyzer\\src\\PARQUET\\batch_20250925_210427.parquet",
+    "rows": 143688,
+    "created_at": "20250925_210427"
+  },
+  {
+    "chunk_id": 95,
+    "file_path": "c:\\Users\\ants_\\Documents\\mycsvanalyzer\\src\\PARQUET\\batch_20250925_210428.parquet",
+    "rows": 143688,
+    "created_at": "20250925_210428"
+  },
+  {
+    "chunk_id": 96,
+    "file_path": "c:\\Users\\ants_\\Documents\\mycsvanalyzer\\src\\PARQUET\\batch_20250925_210430.parquet",
+    "rows": 143688,
+    "created_at": "20250925_210430"
+  },
+  {
+    "chunk_id": 97,
+    "file_path": "c:\\Users\\ants_\\Documents\\mycsvanalyzer\\src\\PARQUET\\batch_20250925_210432.parquet",
+    "rows": 143688,
+    "created_at": "20250925_210432"
+  },
+  {
+    "chunk_id": 98,
+    "file_path": "c:\\Users\\ants_\\Documents\\mycsvanalyzer\\src\\PARQUET\\batch_20250925_210606.parquet",
+    "rows": 143688,
+    "created_at": "20250925_210606"
+  },
+  {
+    "chunk_id": 99,
+    "file_path": "c:\\Users\\ants_\\Documents\\mycsvanalyzer\\src\\PARQUET\\batch_20250925_210613.parquet",
+    "rows": 143688,
+    "created_at": "20250925_210613"
+  },
+  {
+    "chunk_id": 100,
+    "file_path": "c:\\Users\\ants_\\Documents\\mycsvanalyzer\\src\\PARQUET\\batch_20250925_210614.parquet",
+    "rows": 143688,
+    "created_at": "20250925_210614"
+  },
+  {
+    "chunk_id": 101,
+    "file_path": "c:\\Users\\ants_\\Documents\\mycsvanalyzer\\src\\PARQUET\\batch_20250925_210616.parquet",
+    "rows": 143688,
+    "created_at": "20250925_210616"
+  },
+  {
+    "chunk_id": 102,
+    "file_path": "c:\\Users\\ants_\\Documents\\mycsvanalyzer\\src\\PARQUET\\batch_20250925_210754.parquet",
+    "rows": 143688,
+    "created_at": "20250925_210754"
+  },
+  {
+    "chunk_id": 103,
+    "file_path": "c:\\Users\\ants_\\Documents\\mycsvanalyzer\\src\\PARQUET\\batch_20250925_210800.parquet",
+    "rows": 143688,
+    "created_at": "20250925_210800"
+  },
+  {
+    "chunk_id": 104,
+    "file_path": "c:\\Users\\ants_\\Documents\\mycsvanalyzer\\src\\PARQUET\\batch_20250925_210801.parquet",
+    "rows": 143688,
+    "created_at": "20250925_210801"
+  },
+  {
+    "chunk_id": 105,
+    "file_path": "c:\\Users\\ants_\\Documents\\mycsvanalyzer\\src\\PARQUET\\batch_20250925_210805.parquet",
+    "rows": 143688,
+    "created_at": "20250925_210805"
+  },
+  {
+    "chunk_id": 106,
+    "file_path": "c:\\Users\\ants_\\Documents\\mycsvanalyzer\\src\\PARQUET\\batch_20250925_210942.parquet",
+    "rows": 143688,
+    "created_at": "20250925_210942"
+  },
+  {
+    "chunk_id": 107,
+    "file_path": "c:\\Users\\ants_\\Documents\\mycsvanalyzer\\src\\PARQUET\\batch_20250925_210943.parquet",
+    "rows": 143688,
+    "created_at": "20250925_210943"
+  },
+  {
+    "chunk_id": 108,
+    "file_path": "c:\\Users\\ants_\\Documents\\mycsvanalyzer\\src\\PARQUET\\batch_20250925_210945.parquet",
+    "rows": 143688,
+    "created_at": "20250925_210945"
+  },
+  {
+    "chunk_id": 109,
+    "file_path": "c:\\Users\\ants_\\Documents\\mycsvanalyzer\\src\\PARQUET\\batch_20250925_210953.parquet",
+    "rows": 143688,
+    "created_at": "20250925_210953"
+  },
+  {
+    "chunk_id": 110,
+    "file_path": "c:\\Users\\ants_\\Documents\\mycsvanalyzer\\src\\PARQUET\\batch_20250925_211128.parquet",
+    "rows": 143688,
+    "created_at": "20250925_211128"
+  },
+  {
+    "chunk_id": 111,
+    "file_path": "c:\\Users\\ants_\\Documents\\mycsvanalyzer\\src\\PARQUET\\batch_20250925_211129.parquet",
+    "rows": 143688,
+    "created_at": "20250925_211129"
+  },
+  {
+    "chunk_id": 112,
+    "file_path": "c:\\Users\\ants_\\Documents\\mycsvanalyzer\\src\\PARQUET\\batch_20250925_211131.parquet",
+    "rows": 143688,
+    "created_at": "20250925_211131"
+  },
+  {
+    "chunk_id": 113,
+    "file_path": "c:\\Users\\ants_\\Documents\\mycsvanalyzer\\src\\PARQUET\\batch_20250925_211140.parquet",
+    "rows": 143688,
+    "created_at": "20250925_211140"
+  },
+  {
+    "chunk_id": 114,
+    "file_path": "c:\\Users\\ants_\\Documents\\mycsvanalyzer\\src\\PARQUET\\batch_20250925_211312.parquet",
+    "rows": 143688,
+    "created_at": "20250925_211312"
+  },
+  {
+    "chunk_id": 115,
+    "file_path": "c:\\Users\\ants_\\Documents\\mycsvanalyzer\\src\\PARQUET\\batch_20250925_211316.parquet",
+    "rows": 143688,
+    "created_at": "20250925_211316"
+  },
+  {
+    "chunk_id": 116,
+    "file_path": "c:\\Users\\ants_\\Documents\\mycsvanalyzer\\src\\PARQUET\\batch_20250925_211318.parquet",
+    "rows": 143688,
+    "created_at": "20250925_211318"
+  },
+  {
+    "chunk_id": 117,
+    "file_path": "c:\\Users\\ants_\\Documents\\mycsvanalyzer\\src\\PARQUET\\batch_20250925_211727.parquet",
+    "rows": 143688,
+    "created_at": "20250925_211727"
+  },
+  {
+    "chunk_id": 118,
+    "file_path": "c:\\Users\\ants_\\Documents\\mycsvanalyzer\\src\\PARQUET\\batch_20250925_211728.parquet",
+    "rows": 143688,
+    "created_at": "20250925_211728"
+  },
+  {
+    "chunk_id": 119,
+    "file_path": "c:\\Users\\ants_\\Documents\\mycsvanalyzer\\src\\PARQUET\\batch_20250925_211730.parquet",
+    "rows": 143688,
+    "created_at": "20250925_211730"
+  },
+  {
+    "chunk_id": 120,
+    "file_path": "c:\\Users\\ants_\\Documents\\mycsvanalyzer\\src\\PARQUET\\batch_20250925_211732.parquet",
+    "rows": 143688,
+    "created_at": "20250925_211732"
+  },
+  {
+    "chunk_id": 121,
+    "file_path": "c:\\Users\\ants_\\Documents\\mycsvanalyzer\\src\\PARQUET\\batch_20250925_211733.parquet",
+    "rows": 143688,
+    "created_at": "20250925_211733"
+  },
+  {
+    "chunk_id": 122,
+    "file_path": "c:\\Users\\ants_\\Documents\\mycsvanalyzer\\src\\PARQUET\\batch_20250925_211915.parquet",
+    "rows": 143688,
+    "created_at": "20250925_211915"
+  },
+  {
+    "chunk_id": 123,
+    "file_path": "c:\\Users\\ants_\\Documents\\mycsvanalyzer\\src\\PARQUET\\batch_20250925_211916.parquet",
+    "rows": 143688,
+    "created_at": "20250925_211916"
+  },
+  {
+    "chunk_id": 124,
+    "file_path": "c:\\Users\\ants_\\Documents\\mycsvanalyzer\\src\\PARQUET\\batch_20250925_211920.parquet",
+    "rows": 143688,
+    "created_at": "20250925_211920"
+  },
+  {
+    "chunk_id": 125,
+    "file_path": "c:\\Users\\ants_\\Documents\\mycsvanalyzer\\src\\PARQUET\\batch_20250925_211924.parquet",
+    "rows": 143688,
+    "created_at": "20250925_211924"
+  },
+  {
+    "chunk_id": 126,
+    "file_path": "c:\\Users\\ants_\\Documents\\mycsvanalyzer\\src\\PARQUET\\batch_20250925_212100.parquet",
+    "rows": 143688,
+    "created_at": "20250925_212100"
+  },
+  {
+    "chunk_id": 127,
+    "file_path": "c:\\Users\\ants_\\Documents\\mycsvanalyzer\\src\\PARQUET\\batch_20250925_212102.parquet",
+    "rows": 143688,
+    "created_at": "20250925_212102"
+  },
+  {
+    "chunk_id": 128,
+    "file_path": "c:\\Users\\ants_\\Documents\\mycsvanalyzer\\src\\PARQUET\\batch_20250925_212107.parquet",
+    "rows": 143688,
+    "created_at": "20250925_212107"
+  },
+  {
+    "chunk_id": 129,
+    "file_path": "c:\\Users\\ants_\\Documents\\mycsvanalyzer\\src\\PARQUET\\batch_20250925_212113.parquet",
+    "rows": 143688,
+    "created_at": "20250925_212113"
+  },
+  {
+    "chunk_id": 130,
+    "file_path": "c:\\Users\\ants_\\Documents\\mycsvanalyzer\\src\\PARQUET\\batch_20250925_212245.parquet",
+    "rows": 143688,
+    "created_at": "20250925_212245"
+  },
+  {
+    "chunk_id": 131,
+    "file_path": "c:\\Users\\ants_\\Documents\\mycsvanalyzer\\src\\PARQUET\\batch_20250925_212246.parquet",
+    "rows": 143688,
+    "created_at": "20250925_212246"
+  },
+  {
+    "chunk_id": 132,
+    "file_path": "c:\\Users\\ants_\\Documents\\mycsvanalyzer\\src\\PARQUET\\batch_20250925_212250.parquet",
+    "rows": 143688,
+    "created_at": "20250925_212250"
+  },
+  {
+    "chunk_id": 133,
+    "file_path": "c:\\Users\\ants_\\Documents\\mycsvanalyzer\\src\\PARQUET\\batch_20250925_212302.parquet",
+    "rows": 143688,
+    "created_at": "20250925_212302"
+  },
+  {
+    "chunk_id": 134,
+    "file_path": "c:\\Users\\ants_\\Documents\\mycsvanalyzer\\src\\PARQUET\\batch_20250925_212430.parquet",
+    "rows": 143688,
+    "created_at": "20250925_212430"
+  },
+  {
+    "chunk_id": 135,
+    "file_path": "c:\\Users\\ants_\\Documents\\mycsvanalyzer\\src\\PARQUET\\batch_20250925_212432.parquet",
+    "rows": 143688,
+    "created_at": "20250925_212432"
+  },
+  {
+    "chunk_id": 136,
+    "file_path": "c:\\Users\\ants_\\Documents\\mycsvanalyzer\\src\\PARQUET\\batch_20250925_212435.parquet",
+    "rows": 143688,
+    "created_at": "20250925_212435"
+  },
+  {
+    "chunk_id": 137,
+    "file_path": "c:\\Users\\ants_\\Documents\\mycsvanalyzer\\src\\PARQUET\\batch_20250925_212448.parquet",
+    "rows": 143688,
+    "created_at": "20250925_212448"
+  },
+  {
+    "chunk_id": 138,
+    "file_path": "c:\\Users\\ants_\\Documents\\mycsvanalyzer\\src\\PARQUET\\batch_20250925_212614.parquet",
+    "rows": 143688,
+    "created_at": "20250925_212614"
+  },
+  {
+    "chunk_id": 139,
+    "file_path": "c:\\Users\\ants_\\Documents\\mycsvanalyzer\\src\\PARQUET\\batch_20250925_212615.parquet",
+    "rows": 143688,
+    "created_at": "20250925_212615"
+  },
+  {
+    "chunk_id": 140,
+    "file_path": "c:\\Users\\ants_\\Documents\\mycsvanalyzer\\src\\PARQUET\\batch_20250925_212622.parquet",
+    "rows": 143688,
+    "created_at": "20250925_212622"
+  },
+  {
+    "chunk_id": 141,
+    "file_path": "c:\\Users\\ants_\\Documents\\mycsvanalyzer\\src\\PARQUET\\batch_20250925_212645.parquet",
+    "rows": 143688,
+    "created_at": "20250925_212645"
+  },
+  {
+    "chunk_id": 142,
+    "file_path": "c:\\Users\\ants_\\Documents\\mycsvanalyzer\\src\\PARQUET\\batch_20250925_212804.parquet",
+    "rows": 143688,
+    "created_at": "20250925_212804"
+  },
+  {
+    "chunk_id": 143,
+    "file_path": "c:\\Users\\ants_\\Documents\\mycsvanalyzer\\src\\PARQUET\\batch_20250925_212807.parquet",
+    "rows": 143688,
+    "created_at": "20250925_212807"
+  },
+  {
+    "chunk_id": 144,
+    "file_path": "c:\\Users\\ants_\\Documents\\mycsvanalyzer\\src\\PARQUET\\batch_20250925_212811.parquet",
+    "rows": 143688,
+    "created_at": "20250925_212811"
+  },
+  {
+    "chunk_id": 145,
+    "file_path": "c:\\Users\\ants_\\Documents\\mycsvanalyzer\\src\\PARQUET\\batch_20250925_212831.parquet",
+    "rows": 143688,
+    "created_at": "20250925_212831"
+  },
+  {
+    "chunk_id": 146,
+    "file_path": "c:\\Users\\ants_\\Documents\\mycsvanalyzer\\src\\PARQUET\\batch_20250925_213703.parquet",
+    "rows": 143688,
+    "created_at": "20250925_213703"
+  },
+  {
+    "chunk_id": 147,
+    "file_path": "c:\\Users\\ants_\\Documents\\mycsvanalyzer\\src\\PARQUET\\batch_20250925_213706.parquet",
+    "rows": 143688,
+    "created_at": "20250925_213706"
+  },
+  {
+    "chunk_id": 148,
+    "file_path": "c:\\Users\\ants_\\Documents\\mycsvanalyzer\\src\\PARQUET\\batch_20250925_213708.parquet",
+    "rows": 143688,
+    "created_at": "20250925_213708"
+  },
+  {
+    "chunk_id": 149,
+    "file_path": "c:\\Users\\ants_\\Documents\\mycsvanalyzer\\src\\PARQUET\\batch_20250925_213710.parquet",
+    "rows": 143688,
+    "created_at": "20250925_213710"
+  },
+  {
+    "chunk_id": 150,
+    "file_path": "c:\\Users\\ants_\\Documents\\mycsvanalyzer\\src\\PARQUET\\batch_20250925_213712.parquet",
+    "rows": 143688,
+    "created_at": "20250925_213712"
+  },
+  {
+    "chunk_id": 151,
+    "file_path": "c:\\Users\\ants_\\Documents\\mycsvanalyzer\\src\\PARQUET\\batch_20250925_213921.parquet",
+    "rows": 143688,
+    "created_at": "20250925_213921"
+  },
+  {
+    "chunk_id": 152,
+    "file_path": "c:\\Users\\ants_\\Documents\\mycsvanalyzer\\src\\PARQUET\\batch_20250925_213923.parquet",
+    "rows": 143688,
+    "created_at": "20250925_213923"
+  },
+  {
+    "chunk_id": 153,
+    "file_path": "c:\\Users\\ants_\\Documents\\mycsvanalyzer\\src\\PARQUET\\batch_20250925_213929.parquet",
+    "rows": 143688,
+    "created_at": "20250925_213929"
+  },
+  {
+    "chunk_id": 154,
+    "file_path": "c:\\Users\\ants_\\Documents\\mycsvanalyzer\\src\\PARQUET\\batch_20250925_213931.parquet",
+    "rows": 143688,
+    "created_at": "20250925_213931"
+  },
+  {
+    "chunk_id": 155,
+    "file_path": "c:\\Users\\ants_\\Documents\\mycsvanalyzer\\src\\PARQUET\\batch_20250925_214116.parquet",
+    "rows": 143688,
+    "created_at": "20250925_214116"
+  },
+  {
+    "chunk_id": 156,
+    "file_path": "c:\\Users\\ants_\\Documents\\mycsvanalyzer\\src\\PARQUET\\batch_20250925_214118.parquet",
+    "rows": 143688,
+    "created_at": "20250925_214118"
+  },
+  {
+    "chunk_id": 157,
+    "file_path": "c:\\Users\\ants_\\Documents\\mycsvanalyzer\\src\\PARQUET\\batch_20250925_214122.parquet",
+    "rows": 143688,
+    "created_at": "20250925_214122"
+  },
+  {
+    "chunk_id": 158,
+    "file_path": "c:\\Users\\ants_\\Documents\\mycsvanalyzer\\src\\PARQUET\\batch_20250925_214128.parquet",
+    "rows": 143688,
+    "created_at": "20250925_214128"
+  },
+  {
+    "chunk_id": 159,
+    "file_path": "c:\\Users\\ants_\\Documents\\mycsvanalyzer\\src\\PARQUET\\batch_20250925_214316.parquet",
+    "rows": 143688,
+    "created_at": "20250925_214316"
+  },
+  {
+    "chunk_id": 160,
+    "file_path": "c:\\Users\\ants_\\Documents\\mycsvanalyzer\\src\\PARQUET\\batch_20250925_214318.parquet",
+    "rows": 143688,
+    "created_at": "20250925_214318"
+  },
+  {
+    "chunk_id": 161,
+    "file_path": "c:\\Users\\ants_\\Documents\\mycsvanalyzer\\src\\PARQUET\\batch_20250925_214322.parquet",
+    "rows": 143688,
+    "created_at": "20250925_214322"
+  },
+  {
+    "chunk_id": 162,
+    "file_path": "c:\\Users\\ants_\\Documents\\mycsvanalyzer\\src\\PARQUET\\batch_20250925_214335.parquet",
+    "rows": 143688,
+    "created_at": "20250925_214335"
+  },
+  {
+    "chunk_id": 163,
+    "file_path": "c:\\Users\\ants_\\Documents\\mycsvanalyzer\\src\\PARQUET\\batch_20250925_214558.parquet",
+    "rows": 143688,
+    "created_at": "20250925_214558"
+  },
+  {
+    "chunk_id": 164,
+    "file_path": "c:\\Users\\ants_\\Documents\\mycsvanalyzer\\src\\PARQUET\\batch_20250925_214601.parquet",
+    "rows": 143688,
+    "created_at": "20250925_214601"
+  },
+  {
+    "chunk_id": 165,
+    "file_path": "c:\\Users\\ants_\\Documents\\mycsvanalyzer\\src\\PARQUET\\batch_20250925_214605.parquet",
+    "rows": 143688,
+    "created_at": "20250925_214605"
+  },
+  {
+    "chunk_id": 166,
+    "file_path": "c:\\Users\\ants_\\Documents\\mycsvanalyzer\\src\\PARQUET\\batch_20250925_214623.parquet",
+    "rows": 143688,
+    "created_at": "20250925_214623"
+  },
+  {
+    "chunk_id": 167,
+    "file_path": "c:\\Users\\ants_\\Documents\\mycsvanalyzer\\src\\PARQUET\\batch_20250925_214841.parquet",
+    "rows": 143688,
+    "created_at": "20250925_214841"
+  },
+  {
+    "chunk_id": 168,
+    "file_path": "c:\\Users\\ants_\\Documents\\mycsvanalyzer\\src\\PARQUET\\batch_20250925_214844.parquet",
+    "rows": 143688,
+    "created_at": "20250925_214844"
+  },
+  {
+    "chunk_id": 169,
+    "file_path": "c:\\Users\\ants_\\Documents\\mycsvanalyzer\\src\\PARQUET\\batch_20250925_214849.parquet",
+    "rows": 143688,
+    "created_at": "20250925_214849"
+  },
+  {
+    "chunk_id": 170,
+    "file_path": "c:\\Users\\ants_\\Documents\\mycsvanalyzer\\src\\PARQUET\\batch_20250925_214911.parquet",
+    "rows": 143688,
+    "created_at": "20250925_214911"
+  },
+  {
+    "chunk_id": 171,
+    "file_path": "c:\\Users\\ants_\\Documents\\mycsvanalyzer\\src\\PARQUET\\batch_20250925_215046.parquet",
+    "rows": 143688,
+    "created_at": "20250925_215046"
+  },
+  {
+    "chunk_id": 172,
+    "file_path": "c:\\Users\\ants_\\Documents\\mycsvanalyzer\\src\\PARQUET\\batch_20250925_215051.parquet",
+    "rows": 143688,
+    "created_at": "20250925_215051"
+  },
+  {
+    "chunk_id": 173,
+    "file_path": "c:\\Users\\ants_\\Documents\\mycsvanalyzer\\src\\PARQUET\\batch_20250925_215052.parquet",
+    "rows": 143688,
+    "created_at": "20250925_215052"
+  },
+  {
+    "chunk_id": 174,
+    "file_path": "c:\\Users\\ants_\\Documents\\mycsvanalyzer\\src\\PARQUET\\batch_20250925_215111.parquet",
+    "rows": 143688,
+    "created_at": "20250925_215111"
+  },
+  {
+    "chunk_id": 175,
+    "file_path": "c:\\Users\\ants_\\Documents\\mycsvanalyzer\\src\\PARQUET\\batch_20250925_215244.parquet",
+    "rows": 143688,
+    "created_at": "20250925_215244"
+  },
+  {
+    "chunk_id": 176,
+    "file_path": "c:\\Users\\ants_\\Documents\\mycsvanalyzer\\src\\PARQUET\\batch_20250925_215246.parquet",
+    "rows": 143688,
+    "created_at": "20250925_215246"
+  },
+  {
+    "chunk_id": 177,
+    "file_path": "c:\\Users\\ants_\\Documents\\mycsvanalyzer\\src\\PARQUET\\batch_20250925_215250.parquet",
+    "rows": 143688,
+    "created_at": "20250925_215250"
+  },
+  {
+    "chunk_id": 178,
+    "file_path": "c:\\Users\\ants_\\Documents\\mycsvanalyzer\\src\\PARQUET\\batch_20250925_215317.parquet",
+    "rows": 143688,
+    "created_at": "20250925_215317"
+  },
+  {
+    "chunk_id": 179,
+    "file_path": "c:\\Users\\ants_\\Documents\\mycsvanalyzer\\src\\PARQUET\\batch_20250925_215451.parquet",
+    "rows": 143688,
+    "created_at": "20250925_215451"
+  },
+  {
+    "chunk_id": 180,
+    "file_path": "c:\\Users\\ants_\\Documents\\mycsvanalyzer\\src\\PARQUET\\batch_20250925_215453.parquet",
+    "rows": 143688,
+    "created_at": "20250925_215453"
+  },
+  {
+    "chunk_id": 181,
+    "file_path": "c:\\Users\\ants_\\Documents\\mycsvanalyzer\\src\\PARQUET\\batch_20250925_215457.parquet",
+    "rows": 143688,
+    "created_at": "20250925_215457"
+  },
+  {
+    "chunk_id": 182,
+    "file_path": "c:\\Users\\ants_\\Documents\\mycsvanalyzer\\src\\PARQUET\\batch_20250925_215517.parquet",
+    "rows": 143688,
+    "created_at": "20250925_215517"
+  },
+  {
+    "chunk_id": 183,
+    "file_path": "c:\\Users\\ants_\\Documents\\mycsvanalyzer\\src\\PARQUET\\batch_20250925_220441.parquet",
+    "rows": 144072,
+    "created_at": "20250925_220441"
+  }
+]
