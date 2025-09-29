@@ -41,7 +41,13 @@ class RetailMenu:
             try:
                 # Import and run the main data generation
                 from main import generate_initial_data
-                generate_initial_data()
+                from main import ask_parameters
+                ask_parameters()
+                
+                
+                
+                
+                generate_initial_data(start_iteration=start_date,end_iteration=end_date)
                 print("\n✅ Database recreation completed successfully!")
             except Exception as e:
                 print(f"\n❌ Error during database creation: {e}")

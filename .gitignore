@@ -24,3 +24,4 @@ src/sales_timeseries.pickle
 src/sales_timeseries.pickle
 src/sales_timeseries.pickle
 src/sales_timeseries.pickle
+src/PARQUET/chunks_metadata.json

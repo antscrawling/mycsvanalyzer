@@ -1,8 +1,14 @@
 [
   {
     "chunk_id": 0,
-    "file_path": "/Users/joseibay/Documents/mycsvanalyzer/src/PARQUET/batch_20250926_010013.parquet",
-    "rows": 135240,
-    "created_at": "20250926_010013"
+    "file_path": "/Users/joseibay/Documents/mycsvanalyzer/src/PARQUET/batch_20250929_204300.parquet",
+    "rows": 74796,
+    "created_at": "20250929_204300"
+  },
+  {
+    "chunk_id": 1,
+    "file_path": "/Users/joseibay/Documents/mycsvanalyzer/src/PARQUET/batch_20250929_204301.parquet",
+    "rows": 74819,
+    "created_at": "20250929_204301"
   }
 ]

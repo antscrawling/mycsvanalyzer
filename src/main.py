@@ -1,5 +1,3 @@
-
-
 import json
 import pandas as pd
 import numpy as np
@@ -12,6 +10,7 @@ import sys
 from pprint import pprint
 from concurrent.futures import ProcessPoolExecutor, as_completed
 from load_csv_to_df import load_csv_to_df
+from retail_menu import RetailMenu
 from io import StringIO
 
 
@@ -53,6 +52,126 @@ SALES_TIMESERIES_DB = os.path.join(SOURCE_DIR, 'sales_timeseries.db')
 SALES_TIMESERIES_PICKLE = os.path.join(SOURCE_DIR,'sales_timeseries.pickle')
 # DATABASE
 
+
+
+def is_valid_date(mydate: str) -> bool:
+    """Check if date is valid in YYYY-MM-DD format (time is optional)"""
+    try:
+        # Try full datetime format first
+        datetime.strptime(mydate, "%Y-%m-%d %H:%M:%S")
+        return True
+    except ValueError:
+        try:
+            # Try date-only format
+            datetime.strptime(mydate, "%Y-%m-%d")
+            return True
+        except ValueError:
+            return False
+
+def ask_parameters():
+    while True:
+        start_input = input("Enter start date (YYYY-MM-DD) [default: 1900-01-01]: ").strip()
+        end_input = input("Enter end date (YYYY-MM-DD) [default: today's date]: ").strip()
+        print("⚡ Generating new database...")
+
+        # Handle start date
+        if start_input:
+            if is_valid_date(start_input):
+                # If it's just a date (YYYY-MM-DD), add default time
+                if len(start_input) == 10:  # Just date format
+                    start = datetime.strptime(start_input + " 00:00:00", "%Y-%m-%d %H:%M:%S")
+                else:  # Full datetime format
+                    start = datetime.strptime(start_input, "%Y-%m-%d %H:%M:%S")
+            else:
+                print("❌ Invalid start date format. Please use YYYY-MM-DD")
+                continue
+        else:
+            # Default start date
+            start = datetime(1900, 1, 1, 0, 0, 0)
+
+        # Handle end date
+        if end_input:
+            if is_valid_date(end_input):
+                # If it's just a date (YYYY-MM-DD), add default time
+                if len(end_input) == 10:  # Just date format
+                    end = datetime.strptime(end_input + " 00:00:00", "%Y-%m-%d %H:%M:%S")
+                else:  # Full datetime format
+                    end = datetime.strptime(end_input, "%Y-%m-%d %H:%M:%S")
+            else:
+                print("❌ Invalid end date format. Please use YYYY-MM-DD")
+                continue
+        else:
+            # Default to today's date
+            end = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
+
+        # Validate that start date is before end date
+        if start >= end:
+            print("❌ Start date must be before end date. Please try again.")
+            continue
+
+        # Split the datetime range into parts with 6000 records each
+        date_ranges = split_hourly_range(start, end)
+        return date_ranges
+
+
+def generate_initial_data1(date_ranges:object):
+        # Create PARQUET directory if it doesn't exist
+    os.makedirs(PARQUET_FILES, exist_ok=True)
+
+    # Process chunks and collect data before saving to parquet every 4 chunks
+    chunk_results = []
+    collected_data = []
+    chunks_per_file = 4
+    print(f'The dates are {date_ranges} with {len(date_ranges)}')
+    with ProcessPoolExecutor(max_workers=4) as pool:
+        futures = {}
+        for i, (start_date, end_date) in enumerate(date_ranges):
+            # Generate data but don't save to parquet yet (save_to_parquet=False)
+            future = pool.submit(generate_initial_data2, str(start_date), str(end_date), False)
+            futures[future] = i
+
+        for fut in as_completed(futures):
+            chunk_id = futures[fut]
+            chunk_data = fut.result()  # This returns the transaction list
+
+            if chunk_data:
+                print(f"✅ Processed chunk {chunk_id}: {len(chunk_data):,} rows")
+                collected_data.extend(chunk_data)
+
+                # Save to parquet every 4 chunks or when we reach the end
+                if len(collected_data) >= chunks_per_file * CHUNK_SIZE or chunk_id == len(date_ranges) - 1:
+                    # Convert collected data to DataFrame and save
+                    df_batch = pd.DataFrame(collected_data)
+                    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+                    parquet_filename = os.path.join(PARQUET_FILES, f'batch_{timestamp}.parquet')
+
+                    print(f"💾 Saving batch to {parquet_filename}: {len(df_batch):,} rows")
+                    df_batch.to_parquet(parquet_filename, index=False)
+
+                    # Store metadata
+                    chunk_results.append({
+                        'chunk_id': len(chunk_results),
+                        'file_path': parquet_filename,
+                        'rows': len(df_batch),
+                        'created_at': timestamp
+                    })
+
+                    # Clear collected data for next batch
+                    collected_data = []
+
+    # Save metadata
+    metadata_path = os.path.join(PARQUET_FILES, 'chunks_metadata.json')
+    with open(metadata_path, 'w') as f:
+        json.dump(chunk_results, f, indent=2)
+
+    print(f"✅ Database generation complete! {len(chunk_results)} parquet batch files created.")
+
+    # Ask if the user wants to save all chunks to DuckDB
+    save_to_db = input("\nDo you want to save all chunks to DuckDB? (y/n): ").strip().lower()
+    if save_to_db == 'y':
+        print("🔄 Loading all parquet chunks into DuckDB...")
+        save_parquet_chunks_to_duckdb(os.path.join(PARQUET_FILES, 'batch_*.parquet'))
+    
 def save_to_duckdb(df_all:pd.DataFrame, db_path:str=SALES_TIMESERIES_DB):
     print("📊 Saving data to DuckDB...")
     
@@ -202,7 +321,7 @@ def save_to_duckdb(df_all:pd.DataFrame, db_path:str=SALES_TIMESERIES_DB):
        
         print("🎉 Database creation complete!")                 
 
-def generate_initial_data(start_iteration:str,end_iteration:str, save_to_parquet=False):
+def generate_initial_data2(start_iteration:str,end_iteration:str, save_to_parquet=False):
     print("🏪 Retail Sales Database Generator")
     print("=" * 40)
 
@@ -690,24 +809,40 @@ def display_database_indexes(db_path=SALES_TIMESERIES_DB):
             print("  • Improved performance for JOIN operations")
             print("  • More efficient sorting and grouping")
             print("  • Better time series analysis capabilities")
-            
-            # Check if we can validate that indexes exist
-            try:
-                # Try to run some example queries and measure performance
-                print("\n⏱️ Running a sample query with EXPLAIN ANALYZE...")
-                result = con.execute("""
-                    EXPLAIN ANALYZE 
-                    SELECT 
-                        COUNT(*) 
-                    FROM sales_data 
-                    WHERE country = 'Singapore'
-                """).fetchall()
-                
-                for line in result:
-                    print(f"  {line[0]}")
-                
-            except Exception as e:
-                print(f"❓ Could not analyze query performance: {str(e)}")
+            while True:
+                #ask 1-10 and run indexed query
+                choice = input("\nEnter an index number (1-10) to run a sample query, or 'q' to quit: ")
+                if choice.lower() == 'q':
+                    break
+                try:
+                    index_num = int(choice)
+                    if index_num < 1 or index_num > 10:
+                        print("❌ Invalid choice. Please enter a number between 1 and 10.")
+                        continue
+                    
+                    # Map index number to sample queries
+                    sample_queries = {
+                        1: "SELECT COUNT(*) FROM sales_data WHERE date = '2023-01-01'",
+                        2: "SELECT COUNT(*) FROM sales_data WHERE customer_id = '100001'",
+                        3: "SELECT COUNT(*) FROM sales_data WHERE product_id = '100'",
+                        4: "SELECT COUNT(*) FROM sales_data WHERE age BETWEEN 25 AND 40",
+                        5: "SELECT COUNT(*) FROM sales_data WHERE income > 50000",
+                        6: "SELECT COUNT(*) FROM sales_data WHERE country = 'Singapore'",
+                        7: "SELECT COUNT(*) FROM sales_data WHERE city = 'New York'",
+                        8: "SELECT COUNT(*) FROM sales_data WHERE gender = 'F'",
+                        9: "SELECT COUNT(*) FROM sales_data WHERE transaction_desc = 'Product Sale'",
+                        10: "SELECT COUNT(*) FROM sales_data WHERE EXTRACT(hour FROM date) = 12"
+                    }
+
+                    # Run the selected sample query
+                    query = sample_queries[index_num]
+                    print(f"\n🔍 Running query: {query}")
+                    result = con.execute(query).fetchall()
+                    for row in result:
+                        print(f"  {row[0]}")
+                except Exception as e:
+                    print(f"❌ Error running query: {e}")
+
                 
     except Exception as e:
         print(f"❌ Error accessing database: {str(e)}")
@@ -1218,98 +1353,41 @@ def main():
         print("    6. Display database indexes")
         print("    7. Display field descriptions") 
         print("    8. Display database views")
-        print("    9. Display saved queries/macros")
+        print("    9. Retail Menu")
         print("    0. Exit")
 
         choice = input("\nSelect option (0-9): ").strip()
 
         if choice == '1':
-            start = input("Enter start datetime (YYYY-MM-DD HH:MM:SS) [default: 1900-01-01 00:00:00]: ").strip() or '1900-01-01 00:00:00'
-            end = input("Enter end datetime (YYYY-MM-DD HH:MM:SS) [default: 2025-09-02 23:00:00]: ").strip() or '2025-09-02 23:00:00'
-            print("⚡ Generating new database...")
-
-            # Split the datetime range into parts with 6000 records each
-            date_ranges = split_hourly_range(start, end)
-            
-            # Create PARQUET directory if it doesn't exist
-            os.makedirs(PARQUET_FILES, exist_ok=True)
-            
-            # Process chunks and collect data before saving to parquet every 4 chunks
-            chunk_results = []
-            collected_data = []
-            chunks_per_file = 4
-            
-            with ProcessPoolExecutor(max_workers=4) as pool:
-                futures = {}
-                for i, (start_date, end_date) in enumerate(date_ranges):
-                    # Generate data but don't save to parquet yet (save_to_parquet=False)
-                    future = pool.submit(generate_initial_data, str(start_date), str(end_date), False)
-                    futures[future] = i
-                
-                for fut in as_completed(futures):
-                    chunk_id = futures[fut]
-                    chunk_data = fut.result()  # This returns the transaction list
-                    
-                    if chunk_data:
-                        print(f"✅ Processed chunk {chunk_id}: {len(chunk_data):,} rows")
-                        collected_data.extend(chunk_data)
-                        
-                        # Save to parquet every 4 chunks or when we reach the end
-                        if len(collected_data) >= chunks_per_file * CHUNK_SIZE or chunk_id == len(date_ranges) - 1:
-                            # Convert collected data to DataFrame and save
-                            df_batch = pd.DataFrame(collected_data)
-                            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-                            parquet_filename = os.path.join(PARQUET_FILES, f'batch_{timestamp}.parquet')
-                            
-                            print(f"💾 Saving batch to {parquet_filename}: {len(df_batch):,} rows")
-                            df_batch.to_parquet(parquet_filename, index=False)
-                            
-                            # Store metadata
-                            chunk_results.append({
-                                'chunk_id': len(chunk_results),
-                                'file_path': parquet_filename,
-                                'rows': len(df_batch),
-                                'created_at': timestamp
-                            })
-                            
-                            # Clear collected data for next batch
-                            collected_data = []
-            
-            # Save metadata
-            metadata_path = os.path.join(PARQUET_FILES, 'chunks_metadata.json')
-            with open(metadata_path, 'w') as f:
-                json.dump(chunk_results, f, indent=2)
-                
-            print(f"✅ Database generation complete! {len(chunk_results)} parquet batch files created.")
-            
-            # Ask if the user wants to save all chunks to DuckDB
-            save_to_db = input("\nDo you want to save all chunks to DuckDB? (y/n): ").strip().lower()
-            if save_to_db == 'y':
-                print("🔄 Loading all parquet chunks into DuckDB...")
-                save_parquet_chunks_to_duckdb(os.path.join(PARQUET_FILES, 'batch_*.parquet'))
+            mydates = ask_parameters()
+            generate_initial_data1(mydates)
+            #start = input("Enter start datetime (YYYY-MM-DD HH:MM:SS) [default: 1900-01-01 00:00:00]: ").strip() or '1900-01-01 00:00:00'
+            #end = input("Enter end datetime (YYYY-MM-DD HH:MM:SS) [default: 2025-09-02 23:00:00]: ").strip() or '2025-09-02 23:00:00'
+            #print("⚡ Generating new database...")
         
         elif choice == '2':
             print("🔄 Loading dataset from Parquet files...")
             # Use the predefined PARQUET_FILES variable instead of creating a new PARQUET_DIR
             parquet_files = glob.glob(os.path.join(PARQUET_FILES, 'batch_*.parquet'))
-            
-            if not parquet_files:
-                print("❌ No parquet files found. Please generate the dataset first.")
-                df_all = pd.DataFrame()  # Initialize an empty DataFrame
+            if df_all.empty():
+                if not parquet_files:
+                    print("❌ No parquet files found. Please generate the dataset first.")
+                    df_all = pd.DataFrame()  # Initialize an empty DataFrame
+                else:
+                    print(f"📂 Found {len(parquet_files)} parquet files")
+
+                    # Load first file to get schema
+                    df_all = pd.read_parquet(parquet_files[0])
+
+                    # Append other files
+                    if len(parquet_files) > 1:
+                        for file_path in parquet_files[1:]:
+                            df_chunk = pd.read_parquet(file_path)
+                            df_all = pd.concat([df_all, df_chunk], ignore_index=True)
+
+                    print(f"✅ Data loaded successfully: {len(df_all):,} rows from {len(parquet_files)} parquet files")
             else:
-                print(f"📂 Found {len(parquet_files)} parquet files")
-                
-                # Load first file to get schema
-                df_all = pd.read_parquet(parquet_files[0])
-                
-                # Append other files
-                if len(parquet_files) > 1:
-                    for file_path in parquet_files[1:]:
-                        df_chunk = pd.read_parquet(file_path)
-                        df_all = pd.concat([df_all, df_chunk], ignore_index=True)
-                
-                print(f"✅ Data loaded successfully: {len(df_all):,} rows from {len(parquet_files)} parquet files")
-        
+                print('No need to load, as the dataframe is already loaded')
         
         elif choice == '3':
             print('💾 Saving Parquet chunks to DuckDB database...')
@@ -1318,12 +1396,14 @@ def main():
         elif choice == '4':
             print("\n📊 Displaying Sample Dataset")
             print("=" * 40)
-            df_all = load_dataset()
+            #if not df_all :
+            #    df_all = load_dataset()
             
             if df_all.empty:
                 print("❌ No data available. Please load or generate a dataset first.")
-                continue
-                
+            #    continue
+            #else:
+                df_all = load_dataset()    
             # Get total rows and show sample size
             total_rows = len(df_all)
             sample_rows = min(5, total_rows)  # Show at most 5 rows
@@ -1401,7 +1481,7 @@ def main():
         elif choice == '8':
             display_db_views()
         elif choice == '9':
-            display_db_saved_queries()
+            RetailMenu()
         elif choice == '0':
             print("👋 Goodbye!")
             break
@@ -1412,4 +1492,3 @@ def main():
 if __name__ == "__main__":
     main()
     sys.exit(0)
-      
