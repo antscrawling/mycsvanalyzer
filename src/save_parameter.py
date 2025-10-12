@@ -74,6 +74,9 @@ def save_the_parameters_to_db():
     
     # Define which variables to save (only the path/config variables)
     params_to_save = {
+        'VALUE_A' : 42,
+        'VALUE_B' : 3,
+        'VALUE_C' : 't"The value of C = {VALUE_A * VALUE_B}"',
         'OUTPUT_ROOT': OUTPUT_ROOT,
         'SRC_FILES': SRC_FILES,
         'BIG_CSV_FILES': BIG_CSV_FILES,

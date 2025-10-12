@@ -1,4 +1,7 @@
 {
+    "VALUE_A": 42,
+    "VALUE_B": 3,
+    "VALUE_C": "VALUE_A * VALUE_B",
     "OUTPUT_ROOT": "/Users/joseibay/Documents/mycsvanalyzer",
     "SRC_FILES": "/Users/joseibay/Documents/mycsvanalyzer/src",
     "BIG_CSV_FILES": "/Users/joseibay/Documents/mycsvanalyzer/src",
