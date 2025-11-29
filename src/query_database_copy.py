@@ -1,5 +1,4 @@
 import duckdb
-import pandas as pd
 from pprint import pprint
 
 
@@ -8,7 +7,7 @@ from pprint import pprint
 
 class SalesData:
     def __init__(self):
-        df = pd.DataFrame()
+        pass  # No pandas DataFrame needed
     
     
        
@@ -24,11 +23,10 @@ def querry_sales_data():
         #con.execute("CREATE INDEX idx_customer ON sales_data (customer_number)")
         #con.execute("CREATE INDEX idx_receipt ON sales_data (product_name)")
         #con.execute("CREATE INDEX idx_product ON sales_data (transaction_id)")
-        #convert to df
-        df = pd.DataFrame(results, columns=[desc[0] for desc in con.description])
+        #convert to df using DuckDB
+        df = con.execute("SELECT * FROM sales_data").fetch_df()
         
-
-        #df['date'] = pd.to_datetime(df['date'], format='%Y-%m-%d %H:%M:%S')
+        # Date handling is done automatically by DuckDB
     # print(df['date'].dt.strftime('%Y-%m-%d %H:%M:%S'), df['customer_id'], df['total_amount_per_product_sgd'])
         
     # print("\n=== Sample Data ===")

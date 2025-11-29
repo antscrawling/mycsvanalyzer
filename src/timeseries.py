@@ -1,6 +1,4 @@
 import json
-import pandas as pd
-import numpy as np
 import duckdb
 from datetime import datetime, timedelta
 from tqdm import tqdm
@@ -15,31 +13,40 @@ def main():
     csv_files = [f"src/chunk_{i}.csv" for i in range(1,384)]
     for csv_file in csv_files:
         print(f'Processing file: {csv_file}')
-        df = transform_data(csvfile=csv_file)
-    create_duckdb_table(df)
-    print(df.head(5))
-    print(df.info())
-    print(df.describe())   
-    df[df['age'] > 30] 
+        con = transform_data(csvfile=csv_file)
+        
+        if con is not None:
+            create_duckdb_table(con)
+            
+            # Display sample data using DuckDB
+            sample_data = con.execute("SELECT * FROM csv_data LIMIT 5").df()
+            print(sample_data)
+            
+            # Display info using DuckDB
+            table_info = con.execute("PRAGMA table_info('csv_data')").df()
+            print("Table Info:")
+            print(table_info)
+            
+            # Display statistics
+            numeric_stats = con.execute("SELECT * FROM csv_data WHERE age > 30 LIMIT 5").df()
+            print("Records where age > 30:")
+            print(numeric_stats)
+            
+            con.close()
+        else:
+            print(f"Skipped {csv_file} due to loading error") 
 
-def transform_data(csvfile : str)->pd.DataFrame:
+def transform_data(csvfile: str):
     
-    # 1. Load CSV file into DataFrame
-    df = pd.read_csv(csvfile,header=0)
-    
-    ## 2. Convert 'date' column to numeric format
-    #df['date'] = df['date'].apply(lambda x: int(str(x).replace("-", "").replace(":", "").replace(" ", ""))).astype(np.int64)
-    #
-    ## 3. Convert non-numeric columns to integers using factorization
-    #for col in df.columns:
-    #    if df[col].dtype == 'object':  # Check if the column is non-numeric
-    #        df[col], uniques = pd.factorize(df[col])  # Factorize the column
-    #        print(f"Column '{col}' factorized. Unique values: {list(uniques)}")
-    #    else :
-    #        continue
-    ## 4. Print DataFrame info after transformation
-    #print(f"Transformed DataFrame:\n{df.info()}")
-    return df
+    # 1. Load CSV file using DuckDB and create a persistent connection
+    con = duckdb.connect(':memory:')
+    try:
+        con.execute(f"CREATE TABLE csv_data AS SELECT * FROM read_csv_auto('{csvfile}')")
+        return con
+    except Exception as e:
+        print(f"Error loading {csvfile}: {e}")
+        con.close()
+        return None
 
 
    
@@ -55,22 +62,21 @@ def transform_data(csvfile : str)->pd.DataFrame:
 #    return mappings  
      
 
-def create_duckdb_table(df, table_name="all_data"):    
+def create_duckdb_table(source_con, table_name="all_data"):    
+    if source_con is None:
+        print("No connection provided, skipping table creation")
+        return
+        
     # 4. Use DuckDB to store the transformed data
-    with duckdb.connect(database='transformed_data.db', read_only=False) as con:
-        table_name = table_name
-    
+    with duckdb.connect(database='transformed_data.db', read_only=False) as target_con:
         # Create the table if it doesn't exist
-        con.register('df_view', df)
-        con.execute(f"DROP TABLE IF EXISTS {table_name}")
-        con.execute(f"CREATE TABLE {table_name} AS SELECT * FROM df_view")                             
-        records = len(df)
-        # Insert data into the table
-        con.execute(f"INSERT INTO {table_name} SELECT * FROM df_view")
-        con.unregister('df_view')  # Unregister the view after use
-
-
-    print(f"Processed {records} records inserted into DuckDB and mappings saved to ")
+        target_con.execute(f"DROP TABLE IF EXISTS {table_name}")
+        target_con.execute(f"CREATE TABLE {table_name} AS SELECT * FROM csv_data")
+        
+        # Get record count
+        records = source_con.execute("SELECT COUNT(*) FROM csv_data").fetchone()[0]
+        
+    print(f"Processed {records} records inserted into DuckDB table {table_name}")
 
 if __name__ == "__main__":
     main()

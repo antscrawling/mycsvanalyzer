@@ -1,5 +1,4 @@
 import duckdb
-import pandas as pd
 
 SALES_TIMESERIES_DB = 'src/sales_timeseries.db'
 

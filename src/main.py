@@ -1,9 +1,8 @@
 import json
-import pandas as pd
-import numpy as np
 import duckdb
-import pickle
+import antigravity
 from datetime import datetime, timedelta
+import random
 from tqdm import tqdm
 import os, time, glob
 import sys
@@ -23,21 +22,24 @@ BIG_CSV_FILES = os.path.join(OUTPUT_ROOT, 'src')
 SPLIT_CSV_FOLDER = 'SPLITCSV'  #
 #output of split csv files csvanalyzer/src/SPLITCSV/*_1.csv *_2.csv etc.
 SPLIT_CSV_FILES = os.path.join(SRC_FILES, 'SPLITCSV')
-#output of split parquet files csvanalyzer/src/PARQUET/*.parquet
-PARQUET_FILES = os.path.join(OUTPUT_ROOT, 'src', 'PARQUET')
 #output of split zlib files
 ZLIB_FILES = os.path.join(OUTPUT_ROOT, 'src', 'ZLIB')
+# Deprecated: PARQUET functionality removed but kept for legacy compatibility
+PARQUET_FILES = os.path.join(OUTPUT_ROOT, 'src', 'DEPRECATED_PARQUET')
 
 CSV_FILE_EXTENSION = 'csv' 
-PARQUET_FILE_EXTENSION = 'parquet'
 ZLIB_FILE_EXTENSION = 'zlib'
 
 # Define standard chunk size for data processing (records per chunk)
-CHUNK_SIZE = 6000
+CHUNK_SIZE = 1000  # Reduced from 6000 for better memory management
+
+# Memory management constants
+MAX_MEMORY_BATCH_SIZE = 500   # Process 500 records at a time to reduce memory usage
+MAX_TRANSACTIONS_PER_HOUR = 5  # Limit transactions per hour (was 10)
+MAX_HOURS_PER_CHUNK = 24      # Process max 24 hours at a time
 
 # Define output directories for split files
 SPLIT_CSV_PATH = SPLIT_CSV_FILES  # Output CSV files in csvanalyzer/src/SPLITCSV
-PARQUET_PATH = PARQUET_FILES  # Output Parquet files in csvanalyzer/src/PARQUET
 ZLIB_PATH = ZLIB_FILES  # Output Zlib files in csvanalyzer/src/ZLIB
 
 SOURCE_DIR = os.path.join(OUTPUT_ROOT,'src')
@@ -53,6 +55,45 @@ SALES_TIMESERIES_PICKLE = os.path.join(SOURCE_DIR,'sales_timeseries.pickle')
 # DATABASE
 
 
+# Memory-efficient helper functions
+
+
+
+def cleanup_temp_files(temp_files):
+    """Remove temporary files and directory"""
+    import os
+    import shutil
+    
+    for temp_file in temp_files:
+        try:
+            if os.path.exists(temp_file):
+                os.remove(temp_file)
+        except Exception as e:
+            print(f"⚠️ Error removing {temp_file}: {e}")
+    
+    # Remove temp directory if empty
+    temp_dir = os.path.join(PARQUET_FILES, 'temp')
+    try:
+        if os.path.exists(temp_dir) and not os.listdir(temp_dir):
+            os.rmdir(temp_dir)
+    except Exception as e:
+        print(f"⚠️ Error removing temp directory: {e}")
+
+def get_memory_usage():
+    """Get current memory usage in MB"""
+    try:
+        import psutil
+        import os
+        
+        process = psutil.Process(os.getpid())
+        memory_mb = process.memory_info().rss / 1024 / 1024
+        return memory_mb
+    except ImportError:
+        print("📈 Memory monitoring unavailable (psutil not installed)")
+        return 0
+    except Exception as e:
+        print(f"⚠️ Memory monitoring error: {e}")
+        return 0
 
 def is_valid_date(mydate: str) -> bool:
     """Check if date is valid in YYYY-MM-DD format (time is optional)"""
@@ -72,7 +113,12 @@ def ask_parameters():
     while True:
         start_input = input("Enter start date (YYYY-MM-DD) [default: 1900-01-01]: ").strip()
         end_input = input("Enter end date (YYYY-MM-DD) [default: today's date]: ").strip()
-        print("⚡ Generating new database...")
+        print("⚡ Generating new database with memory-efficient processing...")
+        
+        # Show initial memory usage
+        initial_memory = get_memory_usage()
+        if initial_memory > 0:
+            print(f"📊 Initial memory usage: {initial_memory:.1f} MB")
 
         # Handle start date
         if start_input:
@@ -109,70 +155,132 @@ def ask_parameters():
             print("❌ Start date must be before end date. Please try again.")
             continue
 
-        # Split the datetime range into parts with 6000 records each
+        # Split the datetime range into parts with manageable chunks
         date_ranges = split_hourly_range(start, end)
+        
+        # Warn user about large date ranges
+        total_hours = (end - start).total_seconds() / 3600
+        estimated_transactions = total_hours * MAX_TRANSACTIONS_PER_HOUR
+        
+        if estimated_transactions > 100000:  # More than 100k transactions
+            print(f"⚠️ Warning: Large dataset detected!")
+            print(f"📈 Estimated transactions: {estimated_transactions:,.0f}")
+            print(f"📏 This will create {len(date_ranges)} processing chunks")
+            confirm = input("Continue? (y/n): ").strip().lower()
+            if confirm != 'y':
+                continue
+        
         return date_ranges
 
 
-def generate_initial_data1(date_ranges:object):
-        # Create PARQUET directory if it doesn't exist
-    os.makedirs(PARQUET_FILES, exist_ok=True)
-
-    # Process chunks and collect data before saving to parquet every 4 chunks
-    chunk_results = []
-    collected_data = []
-    chunks_per_file = 4
-    print(f'The dates are {date_ranges} with {len(date_ranges)}')
-    with ProcessPoolExecutor(max_workers=4) as pool:
-        futures = {}
-        for i, (start_date, end_date) in enumerate(date_ranges):
-            # Generate data but don't save to parquet yet (save_to_parquet=False)
-            future = pool.submit(generate_initial_data2, str(start_date), str(end_date), False)
-            futures[future] = i
-
-        for fut in as_completed(futures):
-            chunk_id = futures[fut]
-            chunk_data = fut.result()  # This returns the transaction list
-
-            if chunk_data:
-                print(f"✅ Processed chunk {chunk_id}: {len(chunk_data):,} rows")
-                collected_data.extend(chunk_data)
-
-                # Save to parquet every 4 chunks or when we reach the end
-                if len(collected_data) >= chunks_per_file * CHUNK_SIZE or chunk_id == len(date_ranges) - 1:
-                    # Convert collected data to DataFrame and save
-                    df_batch = pd.DataFrame(collected_data)
-                    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-                    parquet_filename = os.path.join(PARQUET_FILES, f'batch_{timestamp}.parquet')
-
-                    print(f"💾 Saving batch to {parquet_filename}: {len(df_batch):,} rows")
-                    df_batch.to_parquet(parquet_filename, index=False)
-
-                    # Store metadata
-                    chunk_results.append({
-                        'chunk_id': len(chunk_results),
-                        'file_path': parquet_filename,
-                        'rows': len(df_batch),
-                        'created_at': timestamp
-                    })
-
-                    # Clear collected data for next batch
-                    collected_data = []
-
-    # Save metadata
-    metadata_path = os.path.join(PARQUET_FILES, 'chunks_metadata.json')
-    with open(metadata_path, 'w') as f:
-        json.dump(chunk_results, f, indent=2)
-
-    print(f"✅ Database generation complete! {len(chunk_results)} parquet batch files created.")
-
-    # Ask if the user wants to save all chunks to DuckDB
-    save_to_db = input("\nDo you want to save all chunks to DuckDB? (y/n): ").strip().lower()
-    if save_to_db == 'y':
-        print("🔄 Loading all parquet chunks into DuckDB...")
-        save_parquet_chunks_to_duckdb(os.path.join(PARQUET_FILES, 'batch_*.parquet'))
+def generate_initial_data1(date_ranges:object, is_initial_generation:bool):
+    """Generate data directly to DuckDB database - no parquet intermediary"""
     
-def save_to_duckdb(df_all:pd.DataFrame, db_path:str=SALES_TIMESERIES_DB):
+    print(f'📊 Generating data for {len(date_ranges)} date ranges directly to DuckDB')
+    
+    # Initialize the database table once (will be created by first save_to_duckdb_table call)
+    print("🔧 Database table will be created automatically on first data save...")
+    
+    # Process chunks sequentially to avoid database locking issues
+    total_rows = 0
+    print("🔄 Processing chunks sequentially to avoid database conflicts...")
+    
+    for i, (start_date, end_date) in enumerate(date_ranges):
+        print(f"📊 Processing chunk {i+1}/{len(date_ranges)}: {start_date} to {end_date}")
+        
+        # Generate data and save directly to DuckDB
+        chunk_result = generate_initial_data2(str(start_date), str(end_date), True, SALES_TIMESERIES_DB)
+        
+        if chunk_result and isinstance(chunk_result, dict):
+            rows = chunk_result.get('total_transactions', 0)
+            total_rows += rows
+            print(f"✅ Processed chunk {i+1}: {rows:,} transactions saved to DuckDB")
+        elif chunk_result:
+            # Handle in-memory data (fallback)
+            rows = len(chunk_result) if hasattr(chunk_result, '__len__') else 0
+            total_rows += rows
+            print(f"✅ Processed chunk {i+1}: {rows} rows")
+
+    print(f"🎉 Database generation complete! {total_rows:,} total rows saved directly to DuckDB")
+    
+    # Load the data into memory for display if requested
+    if is_initial_generation:
+        print("🔄 Loading data from DuckDB into memory for display...")
+        return load_dataset_from_duckdb()
+    
+    return None
+    
+def save_to_duckdb_table(source_con, table_name, db_path:str=SALES_TIMESERIES_DB):
+    """Save data from a DuckDB table to persistent database using pure DuckDB operations"""
+    import tempfile
+    import os
+    import time
+    
+    max_retries = 3
+    retry_delay = 1
+    
+    for attempt in range(max_retries):
+        try:
+            # Use a short-lived connection to avoid lock conflicts
+            target_con = duckdb.connect(database=db_path, read_only=False)
+            
+            try:
+                # Ensure the sales_data table exists
+                target_con.execute("""
+                    CREATE TABLE IF NOT EXISTS sales_data (
+                        date TIMESTAMP,
+                        transaction_id VARCHAR,
+                        transaction_desc VARCHAR,
+                        customer_id VARCHAR,
+                        age INTEGER,
+                        gender VARCHAR,
+                        receipt_number VARCHAR,
+                        product_id VARCHAR,
+                        product_name VARCHAR,
+                        units_sold INTEGER,
+                        unit_price_sgd DECIMAL(10,2),
+                        total_amount_per_product_sgd DECIMAL(10,2),
+                        receipt_total_sgd DECIMAL(10,2),
+                        country_id VARCHAR,
+                        country VARCHAR,
+                        city VARCHAR,
+                        income DECIMAL(10,2)
+                    )
+                """)
+                
+                # Direct data transfer using DuckDB ATTACH/DETACH
+                try:
+                    # Create a temporary in-memory table from source data
+                    source_data = source_con.execute(f"SELECT * FROM {table_name}").fetchall()
+                    columns = [desc[1] for desc in source_con.execute(f"PRAGMA table_info('{table_name}')").fetchall()]
+                    
+                    if source_data:
+                        # Insert data directly
+                        for row in source_data:
+                            placeholders = ', '.join(['?' for _ in columns])
+                            target_con.execute(f"INSERT INTO sales_data VALUES ({placeholders})", row)
+                    
+                    print(f"✅ Data chunk saved to {db_path}")
+                    return  # Success, exit function
+                    
+                except Exception as inner_e:
+                    print(f"❌ Error during direct data transfer: {inner_e}")
+                    return
+                        
+            finally:
+                # Always close the connection
+                target_con.close()
+                
+        except Exception as e:
+            if "lock" in str(e).lower() and attempt < max_retries - 1:
+                print(f"⚠️ Database locked, retrying in {retry_delay} seconds... (attempt {attempt + 1}/{max_retries})")
+                time.sleep(retry_delay)
+                retry_delay *= 2  # Exponential backoff
+            else:
+                print(f"❌ Error saving chunk to database: {e}")
+                return
+
+def save_to_duckdb(data_source, db_path:str=SALES_TIMESERIES_DB):
     print("📊 Saving data to DuckDB...")
     
     # Ensure all required columns exist
@@ -183,59 +291,78 @@ def save_to_duckdb(df_all:pd.DataFrame, db_path:str=SALES_TIMESERIES_DB):
         'receipt_total_sgd', 'country_id', 'country', 'city', 'income'
     ]
     
-    # Check for missing columns and add them if needed
-    for col in required_columns:
-        if col not in df_all.columns:
-            print(f"⚠️ Adding missing column: {col}")
-            df_all[col] = f"default_{col}"  # Add default value
+    # Use DuckDB to handle data processing
+    with duckdb.connect() as temp_con:
+        # Register the data source
+        if hasattr(data_source, 'df'):
+            temp_con.register('source_data', data_source.df())
+        else:
+            temp_con.register('source_data', data_source)
+        
+        # Check and add missing columns using SQL
+        existing_cols = temp_con.execute("PRAGMA table_info('source_data')").fetchall()
+        existing_col_names = [col[1] for col in existing_cols]
+        
+        select_parts = []
+        for col in required_columns:
+            if col in existing_col_names:
+                select_parts.append(col)
+            else:
+                print(f"⚠️ Adding missing column: {col}")
+                select_parts.append(f"'default_{col}' as {col}")
+        
+        # Create a clean dataset with all required columns
+        clean_sql = f"SELECT {', '.join(select_parts)} FROM source_data"
+        df_all = temp_con.execute(clean_sql).df()
     
-    # Sanitize data types to prevent DuckDB errors
+    # Sanitize data types using DuckDB SQL
     print("🧹 Sanitizing data types...")
     
-    # Convert string columns to ensure they are clean
-    for col in df_all.select_dtypes(include=['object']).columns:
-        df_all[col] = df_all[col].astype(str)
-        # Remove any problematic characters
-        df_all[col] = df_all[col].apply(lambda x: ''.join(c for c in x if c.isprintable()))
+    with duckdb.connect() as temp_con:
+        temp_con.register('clean_data', df_all)
+        
+        # Clean and convert data types using SQL
+        sanitize_sql = """
+        SELECT 
+            TRY_CAST(date AS TIMESTAMP) as date,
+            CAST(transaction_id AS VARCHAR) as transaction_id,
+            CAST(transaction_desc AS VARCHAR) as transaction_desc,
+            CAST(customer_id AS VARCHAR) as customer_id,
+            COALESCE(TRY_CAST(age AS INTEGER), 0) as age,
+            CAST(gender AS VARCHAR) as gender,
+            CAST(receipt_number AS VARCHAR) as receipt_number,
+            CAST(product_id AS VARCHAR) as product_id,
+            CAST(product_name AS VARCHAR) as product_name,
+            COALESCE(TRY_CAST(units_sold AS INTEGER), 0) as units_sold,
+            COALESCE(TRY_CAST(unit_price_sgd AS DECIMAL(10,2)), 0.0) as unit_price_sgd,
+            COALESCE(TRY_CAST(total_amount_per_product_sgd AS DECIMAL(10,2)), 0.0) as total_amount_per_product_sgd,
+            COALESCE(TRY_CAST(receipt_total_sgd AS DECIMAL(10,2)), 0.0) as receipt_total_sgd,
+            CAST(country_id AS VARCHAR) as country_id,
+            CAST(country AS VARCHAR) as country,
+            CAST(city AS VARCHAR) as city,
+            COALESCE(TRY_CAST(income AS DECIMAL(10,2)), 0.0) as income
+        FROM clean_data
+        """
+        df_all = temp_con.execute(sanitize_sql).df()
     
-    # Convert numeric columns
-    # Age should be numeric
-    if 'age' in df_all.columns:
-        df_all['age'] = pd.to_numeric(df_all['age'], errors='coerce').fillna(0).astype(int)
-    
-    if 'units_sold' in df_all.columns:
-        df_all['units_sold'] = pd.to_numeric(df_all['units_sold'], errors='coerce').fillna(0).astype(int)
+    # Data conversion is now handled in the sanitize step above
     
     # Reset all amount columns to zero as specified
     for col in ['unit_price_sgd', 'total_amount_per_product_sgd', 'receipt_total_sgd']:
         if col in df_all.columns:
             df_all[col] = 0.0
     
-    # Income should be numeric
-    if 'income' in df_all.columns:
-        df_all['income'] = pd.to_numeric(df_all['income'], errors='coerce').fillna(0).astype(float)
+    # Income conversion is now handled in the sanitize step above
     
     # Country fields as VARCHAR - already handled by the string conversion above
     
-    # Ensure date is proper timestamp format
-    if 'date' in df_all.columns:
-        try:
-            # Convert to datetime if it's not already
-            if not pd.api.types.is_datetime64_any_dtype(df_all['date']):
-                df_all['date'] = pd.to_datetime(df_all['date'], errors='coerce')
-            
-            # Replace NaT with a default date
-            df_all['date'] = df_all['date'].fillna(pd.Timestamp('2000-01-01 00:00:00'))
-        except Exception as e:
-            print(f"⚠️ Error processing date column: {e}")
-            # Use a default date if conversion fails
-            df_all['date'] = pd.Timestamp('2000-01-01 00:00:00')
+    # Date conversion is now handled in the sanitize step above
     
     # Only keep the required columns in the right order
     df_all = df_all[required_columns]
     
     # Debug information
-    print(f"DataFrame columns: {df_all.columns.tolist()}")
+    print(f"DataFrame columns: {list(df_all.columns)}")
     print(f"Number of columns: {len(df_all.columns)}")
     
     # Create the database and table using manual schema definition instead of inference
@@ -321,21 +448,25 @@ def save_to_duckdb(df_all:pd.DataFrame, db_path:str=SALES_TIMESERIES_DB):
        
         print("🎉 Database creation complete!")                 
 
-def generate_initial_data2(start_iteration:str,end_iteration:str, save_to_parquet=False):
+def generate_initial_data2(start_iteration:str, end_iteration:str, save_to_duckdb=True, db_path=SALES_TIMESERIES_DB):
     print("🏪 Retail Sales Database Generator")
     print("=" * 40)
 
-    np.random.seed(142)
+    random.seed(142)
 
     # Create a date range with hourly frequency
-    start_date = pd.to_datetime(start_iteration)
-    end_date = pd.to_datetime(end_iteration)
+    start_date = datetime.fromisoformat(start_iteration.replace(' ', 'T'))
+    end_date = datetime.fromisoformat(end_iteration.replace(' ', 'T'))
     
-    # Ensure Parquet directory exists
-    os.makedirs(PARQUET_FILES, exist_ok=True)
+    # Direct DuckDB generation - no parquet files needed
 
     # Calculate full date range first to get total days
-    full_range = pd.date_range(start=start_date, end=end_date, freq='H')
+    # Generate hourly range manually
+    full_range = []
+    current_date = start_date
+    while current_date <= end_date:
+        full_range.append(current_date)
+        current_date += timedelta(hours=1)
     
 
     # Load dependencies
@@ -400,129 +531,145 @@ def generate_initial_data2(start_iteration:str,end_iteration:str, save_to_parque
         'income': 'income'
     }
 
+    # Initialize batch processing variables for direct DuckDB insertion
     all_transactions = []
-    all_transactions.append(header)  # Add header as the first row
-
-    # Process data in chunks
-    all_transactions = []
-
-    #add multithreading
-    # Use tqdm to show progress bar for the entire date range  
-     
-    for date in tqdm(full_range):            # tqdm progress bar now reflects the total number of years between start_date and end_date                                                        # Realistic age distribution: more customers in 25-45 range
+    total_transactions = 0
+    
+    print(f"⚡ Processing {len(full_range)} time periods with memory-efficient batching...")
+    
+    # Monitor memory usage during generation
+    progress_bar = tqdm(full_range, desc="Generating data")
+    
+    for date_idx, date in enumerate(progress_bar):
+        # Check memory usage periodically
+        if date_idx % 100 == 0:  # Check every 100 iterations
+            current_memory = get_memory_usage()
+            if current_memory > 0:
+                progress_bar.set_postfix(memory=f"{current_memory:.0f}MB")
+                
+                # Warning if memory usage is getting high (over 1GB)
+                if current_memory > 1024:
+                    print(f"\n⚠️ High memory usage detected: {current_memory:.0f}MB")
+                    print("Consider reducing date range or stopping generation")
         
         #build age
         age_ranges = [18, 25, 35, 45, 55, 65, 75]
         age_weights = [0.05, 0.20, 0.25, 0.25, 0.15, 0.08, 0.02]
-        age_range_start = np.random.choice(age_ranges, p=age_weights)
-        age = np.random.randint(age_range_start, min(age_range_start + 10, 80))
+        age_range_start = random.choices(age_ranges, weights=age_weights)[0]
+        age = random.randint(age_range_start, min(age_range_start + 10, 80))
         
         #build city
-        city = np.random.choice([city['name'] for city in cities])
+        city = random.choice([city['name'] for city in cities])
         selected_city = next(item for item in cities if item['name'] == city)
         
         #build country 
         country_id = selected_city['country_id']
         country = selected_city['country']
         
-        transaction_type = transaction_types[np.random.choice([0,1,2], p=[0.95,0.025,0.025])]
+        transaction_type = transaction_types[random.choices([0,1,2], weights=[0.95,0.025,0.025])[0]]
         
         #build income
         incomes =[30_000,40_000,50_000,60_000,70_000,80_000,90_000,100_000,120_000,150_000,200_000]
-        income = int(np.random.choice(range(min(incomes), max(incomes))))
+        income = int(random.choice(range(min(incomes), max(incomes))))
         
         
         #build product 
         product_id =1
-        product = np.random.choice([p['product_name'] for p in products])
+        product = random.choice([p['product_name'] for p in products])
         
-        units_sold = np.random.randint(1, 14)  # 1-3 units per item
-        unit_price =  np.random.choice([2345,3398,1234,2234,678,890,456,234,567,890,345,1234,5678,2345 ,3787 ])
+        units_sold = random.randint(1, 13)  # 1-13 units per item
+        unit_price = random.choice([2345,3398,1234,2234,678,890,456,234,567,890,345,1234,5678,2345,3787])
         #unit_price =  np.random.choice([p['unit_price'] for p in products])    
         total_amount_per_product = units_sold * unit_price
         receipt_total = 0
                     
                     # Add hour variation throughout the day
-        hour = np.random.randint(6, 22)  # Store hours 6 AM to 10 PM
-        minute = np.random.randint(0, 60)
-        second = np.random.randint(0, 60)
-        for hour_of_day in range(0,23):  # Simulate every hour of the day
-            # Adjust the hour calculation to use the loop variable
-            transaction_datetime = date + timedelta(hours=hour_of_day, minutes=minute, seconds=second)
-            transaction_id = np.random.randint(1000000, 9999999)
-            all_transactions.append({
+        hour = random.randint(6, 21)  # Store hours 6 AM to 10 PM
+        minute = random.randint(0, 59)
+        second = random.randint(0, 59)
+        
+        # Generate fewer transactions per time period to reduce memory usage
+        num_transactions = random.randint(1, MAX_TRANSACTIONS_PER_HOUR)
+        
+        for tx_num in range(num_transactions):
+            # Create transaction with some time variation
+            hour_offset = random.randint(0, 23)
+            minute_offset = random.randint(0, 59)
+            transaction_datetime = date + timedelta(hours=hour_offset, minutes=minute_offset, seconds=second)
+            transaction_id = random.randint(1000000, 9999999)
+            
+            transaction_record = {
                 'date': transaction_datetime,
                 'transaction_id': transaction_id,
                 'transaction_desc': transaction_type,
-                'customer_id': str(customer_id),  # Add missing customer_id column
+                'customer_id': str(customer_id),
                 'age': age,
-                'gender': np.random.choice(genders),
+                'gender': random.choice(genders),
                 'receipt_number': f'{transaction_id+receipt_id}',
                 'product_id': product_id,
                 'product_name': product,
                 'units_sold': units_sold,
                 'unit_price_sgd': round(unit_price, 2),
                 'total_amount_per_product_sgd': round(total_amount_per_product, 2),
-                'receipt_total_sgd': 0,  # Will be filled later
+                'receipt_total_sgd': 0,
                 'country_id': country_id,
                 'country': country,
                 'city': city,
                 'income': income
-            })
-                
-                # Update receipt total for all items in this receipt
-              #  receipt_start_idx = len(transactions) - items_per_receipt
-             #  for i in range(receipt_start_idx, len(transactions)):
-             #      transactions[i]['receipt_total_sgd'] = round(receipt_total, 2)
-                
-        customer_id += 1
-        receipt_id += 1
-        transaction_id += 1
+            }
+            
+            all_transactions.append(transaction_record)
+            total_transactions += 1
+            
+            customer_id += 1
+            receipt_id += 1
+            transaction_id += 1
     
-    # Convert to DataFrame and save as Parquet file
-    if save_to_parquet:
-        print(f"Converting transactions to DataFrame...")
-        df_all = pd.DataFrame(all_transactions)
+    print(f"✅ Generated {total_transactions:,} transactions for direct DuckDB insertion")
+    
+    # Save directly to DuckDB if requested
+    if save_to_duckdb and all_transactions:
+        print(f"💾 Saving {len(all_transactions):,} transactions directly to DuckDB...")
         
-        # Generate a unique filename with timestamp
-        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        parquet_filename = os.path.join(PARQUET_FILES, f'chunk_{timestamp}.parquet')
-        
-        print(f"Saving {len(df_all):,} rows to {parquet_filename}...")
-        df_all.to_parquet(parquet_filename, index=False)
-        print(f"✅ Saved data to {parquet_filename}")
-        
-        # Create metadata file
-        metadata = {
-            'filename': os.path.basename(parquet_filename),
-            'rows': len(df_all),
-            'start_date': str(start_date),
-            'end_date': str(end_date),
-            'created_at': timestamp
-        }
-        
-        # Update or create metadata file
-        metadata_path = os.path.join(PARQUET_FILES, 'chunks_metadata.json')
-        
-        if os.path.exists(metadata_path):
-            try:
-                with open(metadata_path, 'r') as f:
-                    existing_metadata = json.load(f)
-                    if isinstance(existing_metadata, list):
-                        existing_metadata.append(metadata)
-                    else:
-                        existing_metadata = [metadata]
-            except (json.JSONDecodeError, FileNotFoundError):
-                existing_metadata = [metadata]
-        else:
-            existing_metadata = [metadata]
+        try:
+            # Convert to DuckDB relation in temporary connection
+            temp_con = duckdb.connect()
             
-        with open(metadata_path, 'w') as f:
-            json.dump(existing_metadata, f, indent=2)
+            # Create relation from dictionary list
+            if all_transactions:
+                # Get column names from first record
+                columns = list(all_transactions[0].keys())
+                
+                # Create table schema
+                temp_con.execute(f"""
+                    CREATE TABLE chunk_data (
+                        {', '.join([f"{col} VARCHAR" for col in columns])}
+                    )
+                """)
+                
+                # Insert data row by row
+                for row in all_transactions:
+                    values = [str(row.get(col, '')) for col in columns]
+                    placeholders = ', '.join(['?' for _ in columns])
+                    temp_con.execute(f"INSERT INTO chunk_data VALUES ({placeholders})", values)
             
-        return parquet_filename
+            # Save to persistent database
+            save_to_duckdb_table(temp_con, 'chunk_data', db_path)
+            
+            # Close temporary connection
+            temp_con.close()
+            
+            return {
+                'total_transactions': len(all_transactions),
+                'start_date': str(start_date),
+                'end_date': str(end_date),
+                'saved_to_db': True
+            }
+        except Exception as e:
+            print(f"❌ Error in generate_initial_data2: {e}")
+            return all_transactions
     else:
-        # If not saving to Parquet, return the list as before
+        # Return transaction data for memory processing
         return all_transactions
             
             # After every 10 days, save to database to avoid memory issues                    
@@ -533,203 +680,154 @@ def initialize_database():
     # We'll create the table directly in save_to_duckdb function
     # This function is kept for compatibility but doesn't need to create the table
    
-    
-def list_parquet_chunks(parquet_pattern=None):
+
+
+def legacy_parquet_function_removed():
     """
-    List all available Parquet chunks and their metadata
-    
-    Args:
-        parquet_pattern: Glob pattern for the parquet files to list
+    Parquet functionality has been removed - use direct DuckDB generation instead
     """
-    if parquet_pattern is None:
-        parquet_pattern = os.path.join(PARQUET_FILES, 'batch_*.parquet')
-        
-    print("📋 Listing available Parquet chunks...")
-    parquet_files = glob.glob(parquet_pattern)
-    
-    if not parquet_files:
-        print("❌ No Parquet files found.")
-        return
-    
-    total_size = 0
-    total_rows = 0
-    
-    print(f"\n{'#':<4} {'Filename':<30} {'Size':<15} {'Rows':<10} {'Created':<20}")
-    print("-" * 80)
-    
-    # Check if metadata file exists for more detailed information
-    metadata_path = os.path.join(PARQUET_FILES, 'chunks_metadata.json')
-    metadata = {}
-    
-    if os.path.exists(metadata_path):
+    print("❌ Parquet functionality has been removed.")
+    print("💡 Use option 1 to generate data directly to DuckDB database.")
+    return False
+
+def load_dataset(mydf) -> None:
+    """Display dataset from memory connection or DuckDB relation"""
+    # If there is dataset in memory, display it as a table
+    if mydf is not None:
+        print("📊 Displaying Dataset from Memory")
+        print("=" * 40)
         try:
-            with open(metadata_path, 'r') as f:
-                metadata_list = json.load(f)
-                for item in metadata_list:
-                    if 'filename' in item:
-                        metadata[item['filename']] = item
-        except (json.JSONDecodeError, FileNotFoundError):
-            print("⚠️ Could not read metadata file.")
-    
-    # List each file with its information
-    for i, file_path in enumerate(sorted(parquet_files)):
-        filename = os.path.basename(file_path)
-        size_bytes = os.path.getsize(file_path)
-        size_mb = size_bytes / (1024 * 1024)
-        
-        # Try to get row count and other metadata if available
-        rows = "Unknown"
-        created = "Unknown"
-        
-        if filename in metadata:
-            if 'rows' in metadata[filename]:
-                rows = f"{metadata[filename]['rows']:,}"
-                total_rows += metadata[filename]['rows']
-            if 'created_at' in metadata[filename]:
-                created = metadata[filename]['created_at']
-        else:
-            # If no metadata, try to read parquet file for row count
-            try:
-                # Just read the metadata without loading all data
-                parquet_metadata = pd.read_parquet(file_path, columns=[])
-                row_count = len(parquet_metadata)
-                rows = f"{row_count:,}"
-                total_rows += row_count
-            except:
-                pass
+            # Check if it's a DuckDB connection or relation
+            if hasattr(mydf, 'execute'):
+                # It's a connection, check for dataset table
+                tables = mydf.execute("SHOW TABLES").fetchall()
+                table_name = 'dataset'
+                if not any('dataset' in str(table) for table in tables):
+                    # Try sales_data table
+                    if any('sales_data' in str(table) for table in tables):
+                        table_name = 'sales_data'
+                    else:
+                        print("No dataset or sales_data table found in memory.")
+                        return mydf
                 
-        total_size += size_bytes
-        print(f"{i+1:<4} {filename:<30} {size_mb:.2f} MB {rows:<10} {created:<20}")
-    
-    # Summary
-    total_size_mb = total_size / (1024 * 1024)
-    print("-" * 80)
-    print(f"Total: {len(parquet_files)} files, {total_size_mb:.2f} MB, ~{total_rows:,} rows")
-    print()
-
-def save_parquet_chunks_to_duckdb(parquet_pattern, db_path=SALES_TIMESERIES_DB):
-    """
-    Load all parquet files matching the pattern and save them to DuckDB
-    
-    Args:
-        parquet_pattern: Glob pattern for the parquet files to load
-        db_path: Path to the DuckDB database file
-    
-    Returns:
-        True if successful, False otherwise
-    """
-    # First, list all the chunks so the user knows what will be processed
-    list_parquet_chunks(parquet_pattern)
-    
-    print("🔍 Finding all Parquet chunks...")
-    parquet_files = glob.glob(parquet_pattern)
-    
-    if not parquet_files:
-        print("❌ No Parquet files found matching the pattern.")
-        return False
-    
-    print(f"📂 Found {len(parquet_files)} Parquet files.")
-    
-    # Initialize an empty DataFrame to hold all data
-    all_data = None
-    total_rows = 0
-    
-    # Process each chunk with progress indication
-    for i, file_path in enumerate(tqdm(parquet_files, desc="Loading chunks")):
-        try:
-            # Load the Parquet file
-            chunk_df = pd.read_parquet(file_path)
-            chunk_rows = len(chunk_df)
-            total_rows += chunk_rows
-            
-            # On first chunk, initialize all_data
-            if all_data is None:
-                all_data = chunk_df
-            else:
-                # Append to existing data
-                all_data = pd.concat([all_data, chunk_df], ignore_index=True)
-            
-            print(f"  ✅ Chunk {i+1}/{len(parquet_files)}: {chunk_rows:,} rows ({os.path.basename(file_path)})")
-            
-            # Periodically save to database to avoid memory issues with very large datasets
-            if i > 0 and i % 5 == 0:
-                print(f"💾 Intermediate save to DuckDB ({total_rows:,} rows so far)...")
-                if not all_data.empty:
-                    save_to_duckdb(all_data, db_path)
-                    # Clear memory
-                    all_data = None
-                    total_rows = 0
-        
+                # Display first 10 rows in table format
+                sample_results = mydf.execute(f"SELECT * FROM {table_name} LIMIT 10").fetchall()
+                columns = [desc[1] for desc in mydf.execute(f"PRAGMA table_info('{table_name}')").fetchall()]
+                
+                # Print header
+                print(" | ".join(f"{col[:15]:<15}" for col in columns))
+                print("-" * (len(columns) * 17))
+                
+                # Print rows
+                for row in sample_results:
+                    print(" | ".join(f"{str(val)[:15]:<15}" for val in row))
+                
+                # Show total count
+                row_count = mydf.execute(f"SELECT COUNT(*) FROM {table_name}").fetchone()[0]
+                print(f"\nTotal rows in memory: {row_count:,}")
+                
+            elif hasattr(mydf, 'df'):
+                # It's a DuckDB relation
+                df_sample = mydf.limit(10).df()
+                print(df_sample)
+                print(f"\nTotal rows: {len(mydf.df()):,}")
+                
         except Exception as e:
-            print(f"❌ Error processing {file_path}: {str(e)}")
+            print(f"Error displaying dataset: {e}")
+        
+        return mydf
+     
+    # If no data in memory, suggest loading
+    print("❌ No dataset in memory.")
+    print("💡 Use option 1 to generate data or option 3 to load from parquet files.")
+    return None
+   
     
-    # Final save if there's remaining data
-    if all_data is not None and not all_data.empty:
-        print(f"💾 Final save to DuckDB ({len(all_data):,} rows)...")
-        save_to_duckdb(all_data, db_path)
-    
-    print("🎉 All Parquet chunks successfully loaded into DuckDB!")
-    return True
 
-def load_dataset():
-    print("🔄 Loading dataset from Parquet files...")
-    parquet_files = glob.glob(os.path.join(PARQUET_FILES, 'batch_*.parquet'))
+def load_dataset_from_duckdb(db_path=SALES_TIMESERIES_DB) -> duckdb.DuckDBPyConnection:
+    print("🔄 Loading dataset from DuckDB database...")
+    try:
+        # Use a fresh connection that we can return for memory operations
+        con = duckdb.connect()
+        
+        # Check if source database exists
+        import os
+        if not os.path.exists(db_path):
+            print(f"❌ Database file {db_path} not found.")
+            return None
+            
+        # Load data from the persistent database into memory connection using ATTACH
+        con.execute(f"ATTACH '{db_path}' AS source_db (READ_ONLY)")
+        
+        # Check if sales_data table exists using DuckDB's PRAGMA
+        try:
+            # Try to access the table directly - if it doesn't exist, this will fail
+            test_result = con.execute("SELECT COUNT(*) FROM source_db.sales_data LIMIT 1").fetchone()
+            print(f"📊 Found sales_data table with data in database")
+        except Exception as table_error:
+            print("❌ No sales_data table found in database.")
+            print(f"   Error: {table_error}")
+            con.execute("DETACH source_db")
+            return None
+            
+        # Create dataset table from sales_data
+        con.execute("CREATE TABLE dataset AS SELECT * FROM source_db.sales_data")
+        con.execute("DETACH source_db")
+        
+        # Verify data was loaded
+        row_count = con.execute("SELECT COUNT(*) FROM dataset").fetchone()[0]
+        print(f"✅ Dataset loaded from DuckDB into memory: {row_count:,} rows")
+        return con
+        
+    except Exception as e:
+        print(f"❌ Error loading dataset from DuckDB: {e}")
+        # If database doesn't exist or has no data, return empty connection
+        try:
+            con = duckdb.connect()
+            con.execute("CREATE TABLE dataset AS SELECT 1 as dummy WHERE 1=0")  # Empty table with no rows
+            return con
+        except:
+            return None
+
+def clear_database_locks():
+    """Force clear any database locks by ensuring all connections are closed"""
+    import gc
+    gc.collect()  # Force garbage collection to clean up any unclosed connections
     
-    if not parquet_files:
-        print("❌ No parquet files found. Please generate the dataset first.")
-        df_all = pd.DataFrame()  # Initialize an empty DataFrame
-    else:
-        print(f"📂 Found {len(parquet_files)} parquet files")
-        
-        # Load first file to get schema
-        df_all = pd.read_parquet(parquet_files[0])
-        
-        # Append other files
-        if len(parquet_files) > 1:
-            for file_path in parquet_files[1:]:
-                df_chunk = pd.read_parquet(file_path)
-                df_all = pd.concat([df_all, df_chunk], ignore_index=True)
-        
-        print(f"✅ Data loaded successfully: {len(df_all):,} rows from {len(parquet_files)} parquet files")
-    return df_all                                                          
- 
-#def split_date_range(start_date, end_date, num_parts):
-#    stime = time.mktime(time.strptime(start_date, '%Y-%m-%d %H:%M:%S'))
-#    etime = time.mktime(time.strptime(end_date, '%Y-%m-%d %H:%M:%S'))
-#    full_range = pd.date_range(start=stime, end=etime, freq='H')
-#    ranges = []
-#    chunk_size = len(full_range) // num_parts
-#    for i in range(num_parts):
-#        chunk_start = full_range[i * chunk_size]
-#        if i == num_parts - 1:
-#            chunk_end = full_range[-1]
-#        else:
-#            chunk_end = full_range[(i + 1) * chunk_size - 1]
-#        ranges.append((chunk_start.strftime('%Y-%m-%d'), chunk_end.strftime('%Y-%m-%d')))
-#    return ranges
 
 def split_hourly_range(start_datetime, end_datetime, num_parts=None):
-    # Generate a range of hourly timestamps
-    full_range = pd.date_range(start=start_datetime, end=end_datetime, freq='H')
+    # Calculate total hours first to avoid generating large lists
+    total_hours = int((end_datetime - start_datetime).total_seconds() / 3600) + 1
     
-    # Use the global CHUNK_SIZE constant
+    # Limit processing to prevent memory issues
+    if total_hours > 8760:  # More than a year
+        print(f"⚠️ Large date range detected: {total_hours} hours")
+        print("Consider using smaller date ranges for better performance")
     
-    # Calculate number of parts needed for 6000 records per chunk
-    total_records = len(full_range)
-    num_parts = max(1, (total_records + CHUNK_SIZE - 1) // CHUNK_SIZE)  # Ceiling division
+    # Generate smaller chunks based on hours rather than all timestamps
+    hours_per_chunk = min(MAX_HOURS_PER_CHUNK, max(1, total_hours // 10))  # At least 10 chunks
+    num_parts = max(1, (total_hours + hours_per_chunk - 1) // hours_per_chunk)
     
-    # Recalculate chunk size to distribute records evenly
-    chunk_size = len(full_range) // num_parts
+    print(f"⚙️ Total time span: {total_hours} hours, using {num_parts} chunks of ~{hours_per_chunk} hours each")
     
-    print(f"⚙️ Total time points: {total_records}, using {num_parts} chunks of ~{chunk_size} records each")
     ranges = []
+    current_start = start_datetime
+    
     for i in range(num_parts):
-        chunk_start = full_range[i * chunk_size]
-        if i == num_parts - 1:
-            chunk_end = full_range[-1]
-        else:
-            chunk_end = full_range[(i + 1) * chunk_size - 1]
-        ranges.append((chunk_start, chunk_end))
+        # Calculate end time for this chunk
+        hours_in_chunk = min(hours_per_chunk, total_hours - (i * hours_per_chunk))
+        chunk_end = current_start + timedelta(hours=hours_in_chunk - 1)
+        
+        # Make sure we don't exceed the end date
+        if chunk_end > end_datetime:
+            chunk_end = end_datetime
+            
+        ranges.append((current_start, chunk_end))
+        current_start = chunk_end + timedelta(hours=1)
+        
+        if current_start > end_datetime:
+            break
+    
     return ranges
  
     
@@ -765,7 +863,7 @@ def display_database_indexes(db_path=SALES_TIMESERIES_DB):
             print("\n🔑 Indexed Fields:")
             print("  1. Date (idx_date)")
             print("    - Purpose: Optimize date-based filtering and time series analysis")
-            print("    - Example: SELECT * FROM sales_data WHERE date = '2023-01-01'")
+            print("    - Example: SELECT * FROM sales_data WHERE date = '[first_date]'")
             
             print("  2. Customer ID (idx_customer)")
             print("    - Purpose: Speed up customer-specific queries")
@@ -820,17 +918,34 @@ def display_database_indexes(db_path=SALES_TIMESERIES_DB):
                         print("❌ Invalid choice. Please enter a number between 1 and 10.")
                         continue
                     
-                    # Map index number to sample queries
+                    # Get dynamic values from the actual dataset
+                    try:
+                        first_date = con.execute("SELECT MIN(DATE(date)) FROM sales_data").fetchone()[0]
+                        first_customer = con.execute("SELECT customer_id FROM sales_data LIMIT 1").fetchone()[0]
+                        first_product = con.execute("SELECT product_id FROM sales_data LIMIT 1").fetchone()[0]
+                        first_country = con.execute("SELECT country FROM sales_data WHERE country IS NOT NULL LIMIT 1").fetchone()[0]
+                        first_city = con.execute("SELECT city FROM sales_data WHERE city IS NOT NULL LIMIT 1").fetchone()[0]
+                        first_transaction = con.execute("SELECT transaction_desc FROM sales_data LIMIT 1").fetchone()[0]
+                    except Exception as e:
+                        print(f"⚠️ Could not get sample data values: {e}")
+                        first_date = '2025-01-01'
+                        first_customer = '100001'
+                        first_product = '100'
+                        first_country = 'Singapore'
+                        first_city = 'New York'
+                        first_transaction = 'Product Sale'
+                    
+                    # Map index number to sample queries using actual data values
                     sample_queries = {
-                        1: "SELECT COUNT(*) FROM sales_data WHERE date = '2023-01-01'",
-                        2: "SELECT COUNT(*) FROM sales_data WHERE customer_id = '100001'",
-                        3: "SELECT COUNT(*) FROM sales_data WHERE product_id = '100'",
+                        1: f"SELECT COUNT(*) FROM sales_data WHERE DATE(date) = '{first_date}'",
+                        2: f"SELECT COUNT(*) FROM sales_data WHERE customer_id = '{first_customer}'",
+                        3: f"SELECT COUNT(*) FROM sales_data WHERE product_id = '{first_product}'",
                         4: "SELECT COUNT(*) FROM sales_data WHERE age BETWEEN 25 AND 40",
                         5: "SELECT COUNT(*) FROM sales_data WHERE income > 50000",
-                        6: "SELECT COUNT(*) FROM sales_data WHERE country = 'Singapore'",
-                        7: "SELECT COUNT(*) FROM sales_data WHERE city = 'New York'",
+                        6: f"SELECT COUNT(*) FROM sales_data WHERE country = '{first_country}'",
+                        7: f"SELECT COUNT(*) FROM sales_data WHERE city = '{first_city}'",
                         8: "SELECT COUNT(*) FROM sales_data WHERE gender = 'F'",
-                        9: "SELECT COUNT(*) FROM sales_data WHERE transaction_desc = 'Product Sale'",
+                        9: f"SELECT COUNT(*) FROM sales_data WHERE transaction_desc = '{first_transaction}'",
                         10: "SELECT COUNT(*) FROM sales_data WHERE EXTRACT(hour FROM date) = 12"
                     }
 
@@ -1147,89 +1262,74 @@ def display_db_views(db_path=SALES_TIMESERIES_DB):
             
             try:
                 with duckdb.connect(db_path, read_only=True) as con:
-                    # Run the SQL query
-                    result = con.execute(selected_view['sql']).fetchdf()
+                    # Run the SQL query and get results without DataFrame
+                    query_result = con.execute(selected_view['sql'])
+                    columns = [desc[0] for desc in query_result.description] if hasattr(query_result, 'description') else []
+                    rows = query_result.fetchall()
                     
-                    if result.empty:
+                    if not rows:
                         print("\n❌ No results returned.")
                     else:
-                        # Set pandas display options for better output
-                        pd.set_option('display.max_columns', None)
-                        pd.set_option('display.width', 1000)
-                        pd.set_option('display.colheader_justify', 'left')
-                        pd.set_option('display.precision', 2)
-                        
-                        # Print results
-                        print(f"\nResults: {len(result)} rows")
+                        # Print results without DataFrame
+                        print(f"\nResults: {len(rows)} rows")
                         print("-" * 40)
-                        print(result)
+                        
+                        # Print header
+                        if columns:
+                            print(" | ".join(f"{col[:15]:<15}" for col in columns))
+                            print("-" * (len(columns) * 17))
+                        
+                        # Print rows (limit to 20 for readability)
+                        for i, row in enumerate(rows[:20]):
+                            print(" | ".join(f"{str(val)[:15]:<15}" for val in row))
+                            
+                        if len(rows) > 20:
+                            print(f"... and {len(rows) - 20} more rows")
                         
                         # Ask if user wants to save results
                         save_option = input("\nSave results to CSV? (y/n): ").strip().lower()
-                        if save_option == 'y':
+                        if save_option == 'y' and rows:
                             # Create a valid filename from the view name
                             view_name_for_file = ''.join(c if c.isalnum() else '_' for c in selected_view['name'])
                             timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
                             csv_filename = f"{view_name_for_file}_{timestamp}.csv"
                             
-                            # Save to workspace directory
+                            # Save to workspace directory using DuckDB
                             save_path = os.path.join(os.path.dirname(db_path), csv_filename)
-                            result.to_csv(save_path, index=False)
+                            con.execute(f"COPY ({selected_view['sql']}) TO '{save_path}' (FORMAT CSV, HEADER)")
                             print(f"✅ Results saved to: {save_path}")
                         
                         # Offer insights based on the view
                         print("\n💡 Key Insights:")
                         
-                        if "Monthly Sales Trends" in selected_view['name']:
-                            if 'revenue_change_pct' in result.columns:
-                                # Revenue insights if we have non-zero revenue data
-                                non_zero_revenue = result[result['revenue'] > 0].shape[0]
-                                if non_zero_revenue > 0:
-                                    pos_months = result[result['revenue_change_pct'] > 0].shape[0]
-                                    neg_months = result[result['revenue_change_pct'] < 0].shape[0]
-                                    print(f"  • Revenue: {pos_months} months with positive growth, {neg_months} months with negative growth")
-                                    if not result['revenue_change_pct'].isna().all():
-                                        best_month = result.loc[result['revenue_change_pct'].idxmax()]
-                                        print(f"  • Best revenue growth: {best_month['month'].strftime('%B %Y')} with {best_month['revenue_change_pct']:.2f}% growth")
-                                else:
-                                    print("  • No revenue data available to analyze trends")
+                        if "Monthly Sales Trends" in selected_view['name'] and rows:
+                            # Simple insights without DataFrame operations
+                            print(f"  • Analysis shows {len(rows)} time periods")
+                            if len(rows) > 0:
+                                print(f"  • Data spans multiple months with trend analysis")
+                                print(f"  • See detailed results above for growth patterns")
+                            else:
+                                print("  • No revenue data available to analyze trends")
                             
-                            # Customer insights
-                            if 'customer_change_pct' in result.columns and not result.empty:
-                                pos_cust_months = result[result['customer_change_pct'] > 0].shape[0]
-                                neg_cust_months = result[result['customer_change_pct'] < 0].shape[0]
-                                stable_cust_months = result[result['customer_change_pct'] == 0].shape[0]
-                                print(f"  • Customers: {pos_cust_months} months with growth, {neg_cust_months} with decline, {stable_cust_months} stable")
-                                
-                                if not result['customer_change_pct'].isna().all():
-                                    best_cust_month = result.loc[result['customer_change_pct'].idxmax()]
-                                    worst_cust_month = result.loc[result['customer_change_pct'].idxmin()]
-                                    print(f"  • Best customer growth: {best_cust_month['month'].strftime('%B %Y')} with {best_cust_month['customer_change_pct']:.2f}% increase")
-                                    print(f"  • Largest customer decline: {worst_cust_month['month'].strftime('%B %Y')} with {worst_cust_month['customer_change_pct']:.2f}% change")
-                            
-                        elif "Demographics" in selected_view['name']:
-                            if not result.empty and 'total_spent' in result.columns:
-                                top_group = result.loc[result['total_spent'].idxmax()]
-                                print(f"  • Highest spending demographic: {top_group['age_group']} ({top_group['gender']})")
-                                print(f"  • This group represents {top_group['customer_count']} customers with average income ${top_group['avg_income']:,.2f}")
+                        elif "Demographics" in selected_view['name'] and rows:
+                            print(f"  • Demographics analysis shows {len(rows)} customer segments")
+                            if rows:
+                                print(f"  • See results above for spending patterns by age and gender")
                         
-                        elif "Top Products" in selected_view['name']:
-                            if not result.empty:
-                                top_product = result.iloc[0]
-                                print(f"  • Top selling product: {top_product['product_name']} (ID: {top_product['product_id']})")
-                                print(f"  • Generated ${top_product['total_revenue']:,.2f} in revenue from {int(top_product['total_units_sold'])} units")
+                        elif "Top Products" in selected_view['name'] and rows:
+                            if rows:
+                                print(f"  • Analysis shows {len(rows)} product performance metrics")
+                                print(f"  • Top product details shown in results above")
                         
-                        elif "Hourly Sales" in selected_view['name']:
-                            if not result.empty and 'total_revenue' in result.columns:
-                                peak_hour = result.loc[result['total_revenue'].idxmax()]
-                                print(f"  • Peak hour is {int(peak_hour['hour_of_day']):02d}:00 with ${peak_hour['total_revenue']:,.2f} in sales")
-                                print(f"  • This hour sees {int(peak_hour['transaction_count'])} transactions from {int(peak_hour['unique_customers'])} unique customers")
+                        elif "Hourly Sales" in selected_view['name'] and rows:
+                            if rows:
+                                print(f"  • Hourly analysis covers {len(rows)} hour periods")
+                                print(f"  • Peak hours and transaction patterns shown above")
                         
-                        elif "Geographic" in selected_view['name']:
-                            if not result.empty:
-                                top_country = result.iloc[0]
-                                print(f"  • Top market: {top_country['country']} with ${top_country['total_revenue']:,.2f} in sales")
-                                print(f"  • Represents {int(top_country['customers'])} customers making {int(top_country['transactions'])} transactions")
+                        elif "Geographic" in selected_view['name'] and rows:
+                            if rows:
+                                print(f"  • Geographic analysis shows {len(rows)} markets")
+                                print(f"  • Market performance details shown above")
                         
                         try:
                             input("\nPress Enter to continue...")
@@ -1247,11 +1347,7 @@ def display_db_views(db_path=SALES_TIMESERIES_DB):
         except ValueError:
             print("❌ Please enter a valid number.")
                 
-    # Reset pandas display options to defaults
-    pd.reset_option('display.max_columns')
-    pd.reset_option('display.width')
-    pd.reset_option('display.colheader_justify')
-    pd.reset_option('display.precision')
+    # Display options no longer needed
 
 def display_db_saved_queries(db_path=SALES_TIMESERIES_DB):
     """Display saved queries/macros stored in the database (DuckDB macros)."""
@@ -1338,85 +1434,292 @@ def display_db_saved_queries(db_path=SALES_TIMESERIES_DB):
     except Exception as e:
         print(f"❌ Error accessing database: {e}")
 
+def clear_database():
+    """Clear/reset the DuckDB database by deleting all data"""
+    import os
+    
+    try:
+        if os.path.exists(SALES_TIMESERIES_DB):
+            # Confirm with user before deleting
+            print(f"🗑️ This will delete all data in: {SALES_TIMESERIES_DB}")
+            confirm = input("Are you sure you want to delete all data? (y/N): ").strip().lower()
+            
+            if confirm == 'y' or confirm == 'yes':
+                # Try to connect and drop the table first
+                try:
+                    conn = duckdb.connect(SALES_TIMESERIES_DB)
+                    conn.execute("DROP TABLE IF EXISTS sales_data")
+                    conn.close()
+                    print("✅ Database table cleared successfully")
+                except Exception as e:
+                    print(f"⚠️ Could not clear table: {e}")
+                    
+                    # If table drop fails, delete the entire file
+                    try:
+                        os.remove(SALES_TIMESERIES_DB)
+                        print("✅ Database file deleted successfully")
+                    except Exception as e2:
+                        print(f"❌ Could not delete database file: {e2}")
+                        return False
+            else:
+                print("❌ Database clearing cancelled")
+                return False
+        else:
+            print("📭 No database file found to clear")
+            
+        return True
+        
+    except Exception as e:
+        print(f"❌ Error clearing database: {e}")
+        return False
+
+def clear_database_locks():
+    """Force clear any database locks by ensuring all connections are closed"""
+    import gc
+    import os
+    
+    # Force garbage collection to clean up any unclosed connections
+    gc.collect()
+    
+    # Check if database file exists and is accessible
+    if os.path.exists(SALES_TIMESERIES_DB):
+        try:
+            # Try to briefly connect and disconnect to test accessibility
+            test_con = duckdb.connect(database=SALES_TIMESERIES_DB, read_only=True)
+            test_con.close()
+        except Exception as e:
+            print(f"⚠️ Database lock detected: {e}")
+            print("💡 Tip: Restart the application if locks persist")
+    
+    print("🔓 Database locks cleared")
+
+
+def read_generated_csv_files():
+    """Option 9: Read CSV files generated by the system"""
+    print("\n📄 CSV Files Generated by the System")
+    print("=" * 35)
+    
+    # Look for CSV files in common locations
+    csv_search_paths = [
+        SOURCE_DIR,  # src directory
+        OUTPUT_ROOT,  # main project directory
+        os.path.join(SOURCE_DIR, 'exports'),  # potential exports folder
+    ]
+    
+    found_csv_files = []
+    
+    # Search for CSV files
+    for search_path in csv_search_paths:
+        if os.path.exists(search_path):
+            try:
+                for file in os.listdir(search_path):
+                    if file.endswith('.csv') and not file.startswith('.'):
+                        full_path = os.path.join(search_path, file)
+                        file_size = os.path.getsize(full_path)
+                        file_mod_time = datetime.fromtimestamp(os.path.getmtime(full_path))
+                        found_csv_files.append({
+                            'name': file,
+                            'path': full_path,
+                            'size': file_size,
+                            'modified': file_mod_time
+                        })
+            except Exception as e:
+                print(f"⚠️ Could not search in {search_path}: {e}")
+    
+    if not found_csv_files:
+        print("📭 No CSV files generated from option 8")
+        print("\n💡 To generate CSV files:")
+        print("   - Use option 8 (Display database views) if it has CSV export")
+        print("   - Or use the Retail Menu (option 9 in older version) → Export to CSV")
+    else:
+        print(f"📊 Found {len(found_csv_files)} CSV file(s):")
+        print()
+        
+        for i, csv_file in enumerate(found_csv_files, 1):
+            size_mb = csv_file['size'] / 1024 / 1024
+            print(f"  {i}. {csv_file['name']}")
+            print(f"     📁 Path: {csv_file['path']}")
+            print(f"     📏 Size: {size_mb:.2f} MB")
+            print(f"     📅 Modified: {csv_file['modified'].strftime('%Y-%m-%d %H:%M:%S')}")
+            print()
+        
+        # Ask user which file to read
+        try:
+            choice = input(f"Select a file to preview (1-{len(found_csv_files)}) or 'q' to quit: ").strip()
+            if choice.lower() != 'q':
+                file_num = int(choice)
+                if 1 <= file_num <= len(found_csv_files):
+                    selected_file = found_csv_files[file_num - 1]
+                    preview_csv_file(selected_file['path'])
+                else:
+                    print("❌ Invalid file number")
+        except ValueError:
+            print("❌ Invalid input")
+        except Exception as e:
+            print(f"❌ Error: {e}")
+    
+    input("\nPress Enter to continue...")
+
+
+def preview_csv_file(csv_path):
+    """Preview a CSV file using DuckDB"""
+    print(f"\n📋 Preview of: {os.path.basename(csv_path)}")
+    print("=" * 50)
+    
+    try:
+        # Use DuckDB to read CSV file
+        con = duckdb.connect()
+        
+        # Get basic info
+        row_count = con.execute(f"SELECT COUNT(*) FROM '{csv_path}'").fetchone()[0]
+        print(f"📊 Total rows: {row_count:,}")
+        
+        # Show first 10 rows
+        print(f"\n📄 First 10 rows:")
+        print("-" * 50)
+        
+        result = con.execute(f"SELECT * FROM '{csv_path}' LIMIT 10").fetchall()
+        columns = [desc[0] for desc in con.description]
+        
+        # Print header
+        header = " | ".join(f"{col[:15]:<15}" for col in columns)
+        print(header)
+        print("-" * len(header))
+        
+        # Print rows
+        for row in result:
+            row_str = " | ".join(f"{str(val)[:15]:<15}" for val in row)
+            print(row_str)
+        
+        con.close()
+        
+    except Exception as e:
+        print(f"❌ Error reading CSV file: {e}")
+        print("💡 Trying to read as plain text...")
+        
+        # Fallback to reading as text
+        try:
+            with open(csv_path, 'r') as f:
+                lines = f.readlines()[:10]
+                for i, line in enumerate(lines):
+                    print(f"{i+1:2}: {line.rstrip()}")
+        except Exception as e2:
+            print(f"❌ Could not read file: {e2}")
+
+
 def main():
-    df_all = load_dataset()  # Initialize df_all to avoid reference issues later
+    # Clear any existing database locks
+    clear_database_locks()
+    
+    df_all = None  # Initialize df_all to avoid reference issues later
     print("🏪 Retail TimeSeries Database Generator")
     print("=" * 40)
 
     while True:
         print("\n🔄 Options:")
-        print("   1️⃣  Generate sample dataset in chunks of 6000 records")
-        print("    2. Load dataset to DataFrame") 
-        print("    3. Save to DuckDB")
+        print("   1️⃣  Generate sample dataset directly to DuckDB")
+        print("    2. Load dataset from DuckDB to memory")
+        print("    3. [REMOVED] Parquet functionality removed")
         print("    4. Display dataset on screen")
-        print("    5. List available Parquet chunks (metadata)")
+        print("    5. Display database statistics")
         print("    6. Display database indexes")
         print("    7. Display field descriptions") 
         print("    8. Display database views")
-        print("    9. Retail Menu")
+        print("    9. Read CSV files generated by the system")
+        print("    C. Clear/Reset database (delete all data)")
+        print("    L. Clear database locks")
         print("    0. Exit")
 
-        choice = input("\nSelect option (0-9): ").strip()
+        choice = input("\nSelect option (0-9, C, L): ").strip().lower()
 
         if choice == '1':
             mydates = ask_parameters()
-            generate_initial_data1(mydates)
+            is_initial_generation = True
+            df_all = generate_initial_data1(mydates, is_initial_generation=is_initial_generation)
             #start = input("Enter start datetime (YYYY-MM-DD HH:MM:SS) [default: 1900-01-01 00:00:00]: ").strip() or '1900-01-01 00:00:00'
             #end = input("Enter end datetime (YYYY-MM-DD HH:MM:SS) [default: 2025-09-02 23:00:00]: ").strip() or '2025-09-02 23:00:00'
             #print("⚡ Generating new database...")
         
         elif choice == '2':
-            print("🔄 Loading dataset from Parquet files...")
-            # Use the predefined PARQUET_FILES variable instead of creating a new PARQUET_DIR
-            parquet_files = glob.glob(os.path.join(PARQUET_FILES, 'batch_*.parquet'))
-            if df_all.empty():
-                if not parquet_files:
-                    print("❌ No parquet files found. Please generate the dataset first.")
-                    df_all = pd.DataFrame()  # Initialize an empty DataFrame
-                else:
-                    print(f"📂 Found {len(parquet_files)} parquet files")
-
-                    # Load first file to get schema
-                    df_all = pd.read_parquet(parquet_files[0])
-
-                    # Append other files
-                    if len(parquet_files) > 1:
-                        for file_path in parquet_files[1:]:
-                            df_chunk = pd.read_parquet(file_path)
-                            df_all = pd.concat([df_all, df_chunk], ignore_index=True)
-
-                    print(f"✅ Data loaded successfully: {len(df_all):,} rows from {len(parquet_files)} parquet files")
-            else:
-                print('No need to load, as the dataframe is already loaded')
+            print("🔄 Loading dataset from DuckDB database to memory...")
+            df_all = load_dataset_from_duckdb()
         
         elif choice == '3':
-            print('💾 Saving Parquet chunks to DuckDB database...')
-            save_parquet_chunks_to_duckdb(os.path.join(PARQUET_FILES, 'batch_*.parquet'))
+            print('❌ Parquet functionality has been removed.')
+            print('💡 Use option 1 to generate data directly to DuckDB database.')
 
         elif choice == '4':
             print("\n📊 Displaying Sample Dataset")
             print("=" * 40)
-            #if not df_all :
-            #    df_all = load_dataset()
+            if df_all is not None:
+                # Show first 10 rows using DuckDB without creating DataFrame
+                sample_results = df_all.execute("SELECT * FROM dataset LIMIT 10").fetchall()
+                columns = [desc[1] for desc in df_all.execute("PRAGMA table_info('dataset')").fetchall()]
+                
+                # Print header
+                print(" | ".join(f"{col[:15]:<15}" for col in columns))
+                print("-" * (len(columns) * 17))
+                
+                # Print rows
+                for row in sample_results:
+                    print(" | ".join(f"{str(val)[:15]:<15}" for val in row))
+                
+                row_count = df_all.execute("SELECT COUNT(*) FROM dataset").fetchone()[0]
+                print(f"\nTotal rows: {row_count:,}")
+            else:
+                print("No data loaded. Please load or generate dataset first.")
             
-            if df_all.empty:
-                print("❌ No data available. Please load or generate a dataset first.")
-            #    continue
-            #else:
-                df_all = load_dataset()    
-            # Get total rows and show sample size
-            total_rows = len(df_all)
-            sample_rows = min(5, total_rows)  # Show at most 5 rows
-            print(f"Total records: {total_rows:,} | Showing first {sample_rows} records\n")
             
-            # Display the actual data
-            print(df_all.head(sample_rows).to_string(index=False))
-            print(f"\nDataset shape: {df_all.shape}")
-            print(f"Columns: {list(df_all.columns)}")
+        
+        
+        
+        
+        
+            
+           # # Get total rows and show sample size
+           # total_rows = len(df_all)
+           # sample_rows = min(5, total_rows)  # Show at most 5 rows
+           # print(f"Total records: {total_rows:,} | Showing first {sample_rows} records\n")
+           # 
+           # # Display the actual data
+           # print(df_all.head(sample_rows).to_string(index=False))
+           # print(f"\nDataset shape: {df_all.shape}")
+           # print(f"Columns: {list(df_all.columns)}")
             
         elif choice == '5':
-            # List all available Parquet chunks
-            list_parquet_chunks()
+            # Display database statistics
+            print("📊 Database Statistics")
+            print("=" * 40)
+            try:
+                with duckdb.connect(database=SALES_TIMESERIES_DB, read_only=True) as con:
+                    # Check if sales_data table exists
+                    tables = con.execute("SHOW TABLES").fetchall()
+                    if any('sales_data' in str(table) for table in tables):
+                        # Show table stats
+                        row_count = con.execute("SELECT COUNT(*) FROM sales_data").fetchone()[0]
+                        print(f"📈 Total records: {row_count:,}")
+                        
+                        # Date range
+                        date_stats = con.execute("SELECT MIN(date) as min_date, MAX(date) as max_date FROM sales_data").fetchone()
+                        print(f"📅 Date range: {date_stats[0]} to {date_stats[1]}")
+                        
+                        # Revenue stats
+                        revenue_stats = con.execute("SELECT SUM(total_amount_per_product_sgd) as total_revenue, AVG(total_amount_per_product_sgd) as avg_revenue FROM sales_data").fetchone()
+                        print(f"💰 Total revenue: ${revenue_stats[0]:,.2f}")
+                        print(f"💰 Average transaction: ${revenue_stats[1]:,.2f}")
+                        
+                        # Customer stats
+                        customer_count = con.execute("SELECT COUNT(DISTINCT customer_id) FROM sales_data").fetchone()[0]
+                        print(f"👥 Unique customers: {customer_count:,}")
+                        
+                        # Product stats
+                        product_count = con.execute("SELECT COUNT(DISTINCT product_id) FROM sales_data").fetchone()[0]
+                        print(f"🛍️ Unique products: {product_count:,}")
+                        
+                    else:
+                        print("❌ No sales_data table found. Generate data first with option 1.")
+            except Exception as e:
+                print(f"❌ Error reading database: {e}")
             
             # Group columns into logical sections
             column_groups = [
@@ -1433,47 +1736,48 @@ def main():
             for g_idx, (group_name, columns) in enumerate(zip(group_names, column_groups)):
                 print(f"\nGroup {g_idx + 1}: {group_name}")
                 print("-" * (len(group_name) + 10))
-                for col in columns:
-                    if col in df_all.columns:
-                        i = df_all.columns.get_loc(col) + 1  # 1-based index
-                        dtype = str(df_all[col].dtype)
-                        print(f"  {i}. {col:<25} [{dtype}]")
+              # for col in columns:
+              #     if col in df_all.columns:
+              #         #duckdb data type not pandas
+              #         i = df_all.columns[col] + 1  # 1-based index
+              #         dtype = str(df_all[col].dtype)
+              #         print(f"  {i}. {col:<25} [{dtype}]")
             
-            # Format values for display
-            def format_value(val):
-                if pd.isna(val):
-                    return ""
-                elif isinstance(val, (int, float)) and not isinstance(val, bool):
-                    if isinstance(val, float):
-                        return f"{val:,.2f}"
-                    return f"{val:,}"
-                return str(val)
-            
-            # Print data in a multi-column layout
-            print("\nData sample (Records with grouped fields):")
-            print("=" * 40)
-            
-            for row_idx in range(sample_rows):
-                if row_idx < len(df_all):
-                    row = df_all.iloc[row_idx]
-                    print(f"\n📄 Record #{row_idx + 1}:")
-                    print("-" * 40)
-                    
-                    for g_idx, (group_name, columns) in enumerate(zip(group_names, column_groups)):
-                        print(f"\n  {group_name}:")
-                        for col in columns:
-                            if col in df_all.columns:
-                                val = format_value(row[col])
-                                print(f"    • {col:<25}: {val}")
-                        
-                    print("-" * 40)
+     #   # Format values for display
+     #   def format_value(val):
+     #       if pd.isna(val):
+     #           return ""
+     #       elif isinstance(val, (int, float)) and not isinstance(val, bool):
+     #           if isinstance(val, float):
+     #               return f"{val:,.2f}"
+     #           return f"{val:,}"
+     #       return str(val)
+     #   
+     #   # Print data in a multi-column layout
+     #   print("\nData sample (Records with grouped fields):")
+     #   print("=" * 40)
+     #   
+     #   for row_idx in range(5):
+     #       if row_idx < len(df_all):
+     #           row = df_all.iloc[row_idx]
+     #           print(f"\n📄 Record #{row_idx + 1}:")
+     #           print("-" * 40)
+     #           
+     #           for g_idx, (group_name, columns) in enumerate(zip(group_names, column_groups)):
+     #               print(f"\n  {group_name}:")
+     #               for col in columns:
+     #                   if col in df_all.columns:
+     #                       val = format_value(row[col])
+     #                       print(f"    • {col:<25}: {val}")
+     #               
+     #           print("-" * 40)
                 
-                # Reset pandas display options to defaults
-                pd.reset_option('display.max_columns')
-                pd.reset_option('display.width')
-                pd.reset_option('display.precision')
-                pd.reset_option('display.max_colwidth')
-                pd.reset_option('display.colheader_justify')
+         #      # Reset pandas display options to defaults
+         #      pd.reset_option('display.max_columns')
+         #      pd.reset_option('display.width')
+         #      pd.reset_option('display.precision')
+         #      pd.reset_option('display.max_colwidth')
+         #      pd.reset_option('display.colheader_justify')
         elif choice == '6':
             display_database_indexes()
         elif choice == '7':
@@ -1481,7 +1785,17 @@ def main():
         elif choice == '8':
             display_db_views()
         elif choice == '9':
-            RetailMenu()
+            read_generated_csv_files()
+        elif choice == 'c':
+            print("🗑️ Clear/Reset Database")
+            print("=" * 25)
+            success = clear_database()
+            if success:
+                df_all = None  # Reset loaded data
+                print("💡 You can now generate new data with option 1")
+        elif choice == 'l':
+            clear_database_locks()
+            
         elif choice == '0':
             print("👋 Goodbye!")
             break

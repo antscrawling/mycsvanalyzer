@@ -5,7 +5,6 @@ Splits large CSV files into smaller chunks while preserving headers
 Each chunk file is named: chunk_1.csv, chunk_2.csv, etc.
 """
 
-import pandas as pd
 import os
 import sys
 from pathlib import Path

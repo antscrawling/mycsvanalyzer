@@ -1,4 +1,4 @@
-import pandas as pd
+import duckdb
 import glob
 import os
 from pathlib import Path
@@ -37,7 +37,8 @@ def rebuild_parquet_file():
     
     #OUTPUT OF THE SAVED parquet will be SRC_FILES/{parquet_file}.csv
     # Read and concat
-    df = pd.concat([pd.read_parquet(f) for f in parquet_files])
+    # Use DuckDB to read and combine all parquet files
+    df = duckdb.read_parquet(parquet_files).df()
 
     # Save back as single CSV FILE
     df.to_csv(parquet_file)
