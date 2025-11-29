@@ -13,20 +13,11 @@ if __name__ == "__main__":
     # List of retail menu programs to test
     retail_menu_programs = [
         "src/main.py",
-        "src/retail_menu.py",
-        "src/retail_analysis.py",
-        "src/hourly_analysis.py",
-        "src/hourly_discount_analysis.py",
-        "src/hourly_sales_analysis.py",
+        "src/api.py"
     ]
 
-    # List of CSV analyzer programs to test
-    csv_analyzer_programs = [
-        "src/analyze_csv.py",
-        "src/convertbigcsv.py",
-        "src/pack_csv.py",
-        "src/unpack_csv.py",
-    ]
+  
+
 
     # Run all retail menu programs
     for program in retail_menu_programs:

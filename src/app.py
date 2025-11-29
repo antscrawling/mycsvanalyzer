@@ -7,42 +7,36 @@ import uvicorn
 from datetime import datetime
 
 class Customer(BaseModel):
-    customer_number: int
-    age: int
-    country: str
+    customer_id: Optional[str]
+    age: Optional[int]
+    country: Optional[str]
 
 class CustomerSummary(BaseModel):
-    customer_number: int
-    age: int
-    country: str
+    customer_id: Optional[str]
+    age: Optional[int]
+    country: Optional[str]
     total_sales: int
     total_amount: float
     
 # Pydantic models
 class Sale(BaseModel):
-    date: str
-    customer_number: int
-    age: int
-    receipt_number: int
-    product_id: str
-    product_name: str
-    units_sold: int
-    unit_price_sgd: float
-    total_amount_per_product_sgd: float
-    receipt_total_sgd: float
-    day_of_week: int
-    month: int
-    hour: int
-    year: int
-    day_of_week_text: str
-    month_text: str
-    day_of_week_sin: float
-    day_of_week_cos: float
-    month_sin: float
-    month_cos: float
-    hour_sin: float
-    hour_cos: float
+    date: Optional[str]
+    transaction_id: Optional[str]
+    transaction_desc: Optional[str]
+    customer_id: Optional[str]
+    age: Optional[int]
+    gender: Optional[str]
+    receipt_number: Optional[str]
+    product_id: Optional[str]
+    product_name: Optional[str]
+    units_sold: Optional[int]
+    unit_price_sgd: Optional[float]
+    total_amount_per_product_sgd: Optional[float]
+    receipt_total_sgd: Optional[float]
+    country_id: Optional[str]
     country: str
+    city: Optional[str]
+    income: Optional[float]
 
 class SalesResponse(BaseModel):
     total_records: int
@@ -66,9 +60,56 @@ class ProductSales(BaseModel):
     total_revenue: float
     avg_price: float
 
+class MonthlySalesTrend(BaseModel):
+    month: str  # Changed to string to handle DATE_TRUNC result
+    revenue: float
+    customers: int
+    prev_revenue: Optional[float]
+    prev_customers: Optional[int]
+    revenue_change_pct: Optional[float]
+    customer_change_pct: Optional[float]
+
+class CustomerDemographics(BaseModel):
+    age_group: str
+    gender: Optional[str]
+    customer_count: int
+    avg_income: Optional[float]
+    total_spent: float
+    avg_spent_per_customer: float
+
+class HourlySalesDistribution(BaseModel):
+    hour_of_day: int
+    transaction_count: int
+    total_revenue: float
+    unique_customers: int
+
+class GeographicSalesDistribution(BaseModel):
+    country: str
+    transactions: int
+    customers: int
+    total_revenue: float
+    revenue_rank: int
+
+class ValueTransaction(BaseModel):
+    value_segment: str
+    transaction_count: int
+    unique_customers: int
+    avg_customer_age: Optional[float]
+    avg_transaction_value: float
+    total_revenue: float
+    relative_to_average: float
+
+class IncomeLevelAnalysis(BaseModel):
+    income_segment: str
+    customer_count: int
+    transaction_count: int
+    total_revenue: float
+    avg_transaction_value: float
+    avg_spent_per_customer: float
+
 # Database connection helper
 def get_db_connection():
-    return duckdb.connect('sales_timeseries.db', read_only=True)
+    return duckdb.connect('src/sales_timeseries.db', read_only=True)
 
 def main():
     app = FastAPI(
@@ -89,7 +130,7 @@ def main():
         start_date: Optional[str] = Query(None, description="Start date in YYYY-MM-DD format", examples=["2024-01-01"]),
         end_date: Optional[str] = Query(None, description="End date in YYYY-MM-DD format", examples=["2024-12-31"]),
         product_id: Optional[str] = Query(None, description="Filter by product ID", examples=["P001"]),
-        customer_number: Optional[int] = Query(None, description="Filter by customer number", examples=[100001]),
+        customer_id: Optional[str] = Query(None, description="Filter by customer ID", examples=["C001"]),
         min_age: Optional[int] = Query(None, ge=18, le=100, description="Minimum customer age", examples=[25]),
         max_age: Optional[int] = Query(None, ge=18, le=100, description="Maximum customer age", examples=[65])
     ):
@@ -102,7 +143,7 @@ def main():
             start_date: Start date filter in YYYY-MM-DD format
             end_date: End date filter in YYYY-MM-DD format
             product_id: Filter by specific product ID (P001, P002, etc.)
-            customer_number: Filter by specific customer number
+            customer_id: Filter by specific customer ID
             min_age: Minimum customer age filter (18-100)
             max_age: Maximum customer age filter (18-100)
             
@@ -138,8 +179,8 @@ def main():
                     where_conditions.append(f"date <= '{end_date}'")
                 if product_id:
                     where_conditions.append(f"product_id = '{product_id}'")
-                if customer_number:
-                    where_conditions.append(f"customer_number = {customer_number}")
+                if customer_id:
+                    where_conditions.append(f"customer_id = '{customer_id}'")
                 if min_age:
                     where_conditions.append(f"age >= {min_age}")
                 if max_age:
@@ -154,40 +195,39 @@ def main():
                 # Get paginated data
                 offset = (page - 1) * page_size
                 data_query = f"""
-                    SELECT * FROM sales_data{where_clause}
+                    SELECT 
+                        date, transaction_id, transaction_desc, customer_id, age, gender,
+                        receipt_number, product_id, product_name, units_sold, 
+                        unit_price_sgd, total_amount_per_product_sgd, receipt_total_sgd,
+                        country_id, country, city, income
+                    FROM sales_data{where_clause}
                     ORDER BY date DESC
                     LIMIT {page_size} OFFSET {offset}
                 """
                 
-                df = con.execute(data_query).df()
+                results = con.execute(data_query).fetchall()
                 
                 # Convert to list of Sale objects
                 sales = []
-                for _, row in df.iterrows():
+                for row in results:
                     sale = Sale(
-                        date=str(row['date']),
-                        customer_number=int(row['customer_number']),
-                        age=int(row['age']),
-                        receipt_number=int(row['receipt_number']),
-                        product_id=row['product_id'],
-                        product_name=row['product_name'],
-                        units_sold=int(row['units_sold']),
-                        unit_price_sgd=float(row['unit_price_sgd']),
-                        total_amount_per_product_sgd=float(row['total_amount_per_product_sgd']),
-                        receipt_total_sgd=float(row['receipt_total_sgd']),
-                        day_of_week=int(row['day_of_week']),
-                        month=int(row['month']),
-                        hour=int(row['hour']),
-                        year=int(row['year']),
-                        day_of_week_text=row['day_of_week_text'],
-                        month_text=row['month_text'],
-                        day_of_week_sin=float(row['day_of_week_sin']),
-                        day_of_week_cos=float(row['day_of_week_cos']),
-                        month_sin=float(row['month_sin']),
-                        month_cos=float(row['month_cos']),
-                        hour_sin=float(row['hour_sin']),
-                        hour_cos=float(row['hour_cos']),
-                        country=row['country']
+                        date=str(row[0]) if row[0] is not None else None,
+                        transaction_id=str(row[1]) if row[1] is not None else None,
+                        transaction_desc=str(row[2]) if row[2] is not None else None,
+                        customer_id=str(row[3]) if row[3] is not None else None,
+                        age=int(row[4]) if row[4] is not None else None,
+                        gender=str(row[5]) if row[5] is not None else None,
+                        receipt_number=str(row[6]) if row[6] is not None else None,
+                        product_id=str(row[7]) if row[7] is not None else None,
+                        product_name=str(row[8]) if row[8] is not None else None,
+                        units_sold=int(row[9]) if row[9] is not None else None,
+                        unit_price_sgd=float(row[10]) if row[10] is not None else None,
+                        total_amount_per_product_sgd=float(row[11]) if row[11] is not None else None,
+                        receipt_total_sgd=float(row[12]) if row[12] is not None else None,
+                        country_id=str(row[13]) if row[13] is not None else None,
+                        country=str(row[14]) if row[14] is not None else "Unknown",
+                        city=str(row[15]) if row[15] is not None else None,
+                        income=float(row[16]) if row[16] is not None else None
                     )
                     sales.append(sale)
                 
@@ -208,19 +248,19 @@ def main():
                 # Get unique customers only
                 query = """
                     SELECT DISTINCT 
-                        customer_number,
+                        customer_id,
                         age,
                         country
                     FROM sales_data 
-                    ORDER BY customer_number
+                    ORDER BY customer_id
                 """
-                df = con.execute(query).df()
+                results = con.execute(query).fetchall()
                 customers = []
-                for _, row in df.iterrows():
+                for row in results:
                     customer = Customer(
-                        customer_number=int(row['customer_number']),
-                        age=int(row['age']),
-                        country=row['country']
+                        customer_id=str(row[0]) if row[0] is not None else None,
+                        age=int(row[1]) if row[1] is not None else None,
+                        country=str(row[2]) if row[2] is not None else None
                     )
                     customers.append(customer)
                 return customers
@@ -234,24 +274,24 @@ def main():
             with get_db_connection() as con:
                 query = """
                     SELECT 
-                        customer_number,
+                        customer_id,
                         age,
                         country,
                         COUNT(*) as total_sales,
                         SUM(total_amount_per_product_sgd) as total_amount
                     FROM sales_data 
-                    GROUP BY customer_number, age, country
-                    ORDER BY customer_number
+                    GROUP BY customer_id, age, country
+                    ORDER BY customer_id
                 """
-                df = con.execute(query).df()
+                results = con.execute(query).fetchall()
                 customers = []
-                for _, row in df.iterrows():
+                for row in results:
                     customer = CustomerSummary(
-                        customer_number=int(row['customer_number']),
-                        age=int(row['age']),
-                        country=row['country'],
-                        total_sales=int(row['total_sales']),
-                        total_amount=float(row['total_amount'])
+                        customer_id=str(row[0]) if row[0] is not None else None,
+                        age=int(row[1]) if row[1] is not None else None,
+                        country=str(row[2]) if row[2] is not None else None,
+                        total_sales=int(row[3]) if row[3] is not None else 0,
+                        total_amount=float(row[4]) if row[4] is not None else 0.0
                     )
                     customers.append(customer)
                 return customers
@@ -268,7 +308,7 @@ def main():
                     SELECT 
                         COUNT(*) as total_records,
                         SUM(total_amount_per_product_sgd) as total_revenue,
-                        COUNT(DISTINCT customer_number) as unique_customers,
+                        COUNT(DISTINCT customer_id) as unique_customers,
                         COUNT(DISTINCT receipt_number) as unique_receipts,
                         MIN(date) as date_start,
                         MAX(date) as date_end
@@ -289,16 +329,16 @@ def main():
                     ORDER BY total_revenue DESC
                     LIMIT 10
                 """
-                top_products_df = con.execute(top_products_query).df()
+                top_products_results = con.execute(top_products_query).fetchall()
                 
                 top_products = []
-                for _, row in top_products_df.iterrows():
+                for row in top_products_results:
                     top_products.append({
-                        "product_id": row['product_id'],
-                        "product_name": row['product_name'],
-                        "total_units": int(row['total_units']),
-                        "total_revenue": float(row['total_revenue']),
-                        "avg_price": float(row['avg_price'])
+                        "product_id": row[0],
+                        "product_name": row[1],
+                        "total_units": int(row[2]),
+                        "total_revenue": float(row[3]),
+                        "avg_price": float(row[4])
                     })
                 
                 return SalesSummary(
@@ -314,32 +354,34 @@ def main():
         except Exception as e:
             raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
 
-    @app.get("/products/", response_model=List[ProductSales], tags=["Products"])
-    def get_product_performance():
-        """Get product performance metrics"""
+    @app.get("/analytics/top-products/", response_model=List[ProductSales], tags=["Analytics"])
+    def get_top_products():
+        """Top Products by Revenue - Shows the best-selling products with sales metrics"""
         try:
             with get_db_connection() as con:
                 query = """
                     SELECT 
                         product_id,
                         product_name,
-                        SUM(units_sold) as total_units_sold,
-                        SUM(total_amount_per_product_sgd) as total_revenue,
-                        AVG(unit_price_sgd) as avg_price
+                        COUNT(*) AS transaction_count,
+                        SUM(units_sold) AS total_units_sold,
+                        SUM(total_amount_per_product_sgd) AS total_revenue,
+                        AVG(unit_price_sgd) AS avg_price
                     FROM sales_data
                     GROUP BY product_id, product_name
                     ORDER BY total_revenue DESC
+                    LIMIT 20
                 """
-                df = con.execute(query).df()
+                results = con.execute(query).fetchall()
                 
                 products = []
-                for _, row in df.iterrows():
+                for row in results:
                     product = ProductSales(
-                        product_id=row['product_id'],
-                        product_name=row['product_name'],
-                        total_units_sold=int(row['total_units_sold']),
-                        total_revenue=float(row['total_revenue']),
-                        avg_price=float(row['avg_price'])
+                        product_id=row[0],
+                        product_name=row[1],
+                        total_units_sold=int(row[3]),
+                        total_revenue=float(row[4]),
+                        avg_price=float(row[5])
                     )
                     products.append(product)
                 
@@ -348,9 +390,79 @@ def main():
         except Exception as e:
             raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
 
-    @app.get("/analytics/age-groups/", tags=["Analytics"])
-    def get_age_group_analytics():
-        """Get sales analytics by age groups"""
+    @app.get("/analytics/monthly-trends/", response_model=List[MonthlySalesTrend], tags=["Analytics"])
+    def get_monthly_sales_trends():
+        """Monthly Sales Trends - Shows revenue and customer trends by month with growth percentages"""
+        try:
+            with get_db_connection() as con:
+                query = """
+                    WITH monthly_sales AS (
+                        SELECT 
+                            DATE_TRUNC('month', date) AS month,
+                            SUM(total_amount_per_product_sgd) AS revenue,
+                            COUNT(DISTINCT customer_id) AS customers
+                        FROM sales_data
+                        GROUP BY DATE_TRUNC('month', date)
+                        ORDER BY month
+                    ),
+                    with_prev AS (
+                        SELECT 
+                            month, 
+                            revenue,
+                            customers,
+                            LAG(revenue) OVER (ORDER BY month) AS prev_revenue,
+                            LAG(customers) OVER (ORDER BY month) AS prev_customers
+                        FROM monthly_sales
+                    )
+                    SELECT 
+                        month,
+                        revenue,
+                        customers,
+                        prev_revenue,
+                        prev_customers,
+                        CASE 
+                            WHEN prev_revenue IS NULL THEN NULL
+                            WHEN prev_revenue = 0 THEN 
+                                CASE 
+                                    WHEN revenue = 0 THEN 0
+                                    ELSE 100 -- from zero to something is 100% growth
+                                END
+                            ELSE ((revenue - prev_revenue) / prev_revenue) * 100 
+                        END AS revenue_change_pct,
+                        CASE
+                            WHEN prev_customers IS NULL THEN NULL
+                            WHEN prev_customers = 0 THEN 
+                                CASE
+                                    WHEN customers = 0 THEN 0
+                                    ELSE 100
+                                END
+                            ELSE ((customers - prev_customers) / prev_customers) * 100
+                        END AS customer_change_pct
+                    FROM with_prev
+                    ORDER BY month
+                """
+                results = con.execute(query).fetchall()
+                
+                trends = []
+                for row in results:
+                    trends.append(MonthlySalesTrend(
+                        month=str(row[0]),
+                        revenue=float(row[1]),
+                        customers=int(row[2]),
+                        prev_revenue=float(row[3]) if row[3] is not None else None,
+                        prev_customers=int(row[4]) if row[4] is not None else None,
+                        revenue_change_pct=float(row[5]) if row[5] is not None else None,
+                        customer_change_pct=float(row[6]) if row[6] is not None else None
+                    ))
+                
+                return trends
+                
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
+
+    @app.get("/analytics/customer-demographics/", response_model=List[CustomerDemographics], tags=["Analytics"])
+    def get_customer_demographics():
+        """Customer Demographics Analysis - Segments customers by age groups and gender with spending patterns"""
         try:
             with get_db_connection() as con:
                 query = """
@@ -363,43 +475,264 @@ def main():
                             WHEN age BETWEEN 56 AND 65 THEN '56-65'
                             WHEN age > 65 THEN '65+'
                             ELSE 'Unknown'
-                        END as age_group,
-                        COUNT(*) as transaction_count,
-                        SUM(total_amount_per_product_sgd) as total_revenue,
-                        AVG(total_amount_per_product_sgd) as avg_transaction_value,
-                        COUNT(DISTINCT customer_number) as unique_customers,
-                        AVG(age) as avg_age_in_group
+                        END AS age_group,
+                        gender,
+                        COUNT(DISTINCT customer_id) AS customer_count,
+                        AVG(income) AS avg_income,
+                        SUM(total_amount_per_product_sgd) AS total_spent,
+                        SUM(total_amount_per_product_sgd) / COUNT(DISTINCT customer_id) AS avg_spent_per_customer
                     FROM sales_data
-                    WHERE age IS NOT NULL
-                    GROUP BY age_group
-                    ORDER BY 
-                        CASE age_group
-                            WHEN '18-25' THEN 1
-                            WHEN '26-35' THEN 2
-                            WHEN '36-45' THEN 3
-                            WHEN '46-55' THEN 4
-                            WHEN '56-65' THEN 5
-                            WHEN '65+' THEN 6
-                            ELSE 7
-                        END
+                    GROUP BY age_group, gender
+                    ORDER BY age_group, gender
                 """
-                df = con.execute(query).df()
+                results = con.execute(query).fetchall()
                 
-                age_groups = []
-                for _, row in df.iterrows():
-                    age_groups.append({
-                        "age_group": row['age_group'],
-                        "transaction_count": int(row['transaction_count']),
-                        "total_revenue": float(row['total_revenue']),
-                        "avg_transaction_value": float(row['avg_transaction_value']),
-                        "unique_customers": int(row['unique_customers']),
-                        "avg_age_in_group": float(row['avg_age_in_group'])
-                    })
+                demographics = []
+                for row in results:
+                    demographics.append(CustomerDemographics(
+                        age_group=str(row[0]),
+                        gender=str(row[1]) if row[1] is not None else None,
+                        customer_count=int(row[2]) if row[2] is not None else 0,
+                        avg_income=float(row[3]) if row[3] is not None else None,
+                        total_spent=float(row[4]) if row[4] is not None else 0.0,
+                        avg_spent_per_customer=float(row[5]) if row[5] is not None else 0.0
+                    ))
                 
-                return {
-                    "age_group_analytics": age_groups,
-                    "total_customers_analyzed": int(df['unique_customers'].sum())
-                }
+                return demographics
+                
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
+
+    @app.get("/analytics/hourly-distribution/", response_model=List[HourlySalesDistribution], tags=["Analytics"])
+    def get_hourly_sales_distribution():
+        """Hourly Sales Distribution - Analyzes sales patterns by hour of day"""
+        try:
+            with get_db_connection() as con:
+                query = """
+                    SELECT 
+                        EXTRACT(hour FROM date) AS hour_of_day,
+                        COUNT(*) AS transaction_count,
+                        SUM(total_amount_per_product_sgd) AS total_revenue,
+                        COUNT(DISTINCT customer_id) AS unique_customers
+                    FROM sales_data
+                    GROUP BY hour_of_day
+                    ORDER BY hour_of_day
+                """
+                results = con.execute(query).fetchall()
+                
+                hourly_data = []
+                for row in results:
+                    hourly_data.append(HourlySalesDistribution(
+                        hour_of_day=int(row[0]),
+                        transaction_count=int(row[1]),
+                        total_revenue=float(row[2]),
+                        unique_customers=int(row[3])
+                    ))
+                
+                return hourly_data
+                
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
+
+    @app.get("/analytics/geographic-distribution/", response_model=List[GeographicSalesDistribution], tags=["Analytics"])
+    def get_geographic_sales_distribution():
+        """Geographic Sales Distribution - Shows sales by country and city with rankings"""
+        try:
+            with get_db_connection() as con:
+                query = """
+                    WITH country_sales AS (
+                        SELECT 
+                            country,
+                            COUNT(*) AS transactions,
+                            COUNT(DISTINCT customer_id) AS customers,
+                            SUM(total_amount_per_product_sgd) AS total_revenue
+                        FROM sales_data
+                        GROUP BY country
+                    ),
+                    ranked_countries AS (
+                        SELECT 
+                            country,
+                            transactions,
+                            customers,
+                            total_revenue,
+                            RANK() OVER (ORDER BY total_revenue DESC) as revenue_rank
+                        FROM country_sales
+                    )
+                    SELECT
+                        country,
+                        transactions,
+                        customers,
+                        total_revenue,
+                        revenue_rank
+                    FROM ranked_countries
+                    ORDER BY revenue_rank
+                    LIMIT 15
+                """
+                results = con.execute(query).fetchall()
+                
+                geographic_data = []
+                for row in results:
+                    geographic_data.append(GeographicSalesDistribution(
+                        country=row[0],
+                        transactions=int(row[1]),
+                        customers=int(row[2]),
+                        total_revenue=float(row[3]),
+                        revenue_rank=int(row[4])
+                    ))
+                
+                return geographic_data
+                
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
+
+    @app.get("/analytics/value-transactions/", response_model=List[ValueTransaction], tags=["Analytics"])
+    def get_value_transactions():
+        """High-Value vs Low-Value Transactions - Compares highest and lowest value transactions by various dimensions"""
+        try:
+            with get_db_connection() as con:
+                query = """
+                    WITH transaction_values AS (
+                        SELECT
+                            date,
+                            transaction_id,
+                            customer_id,
+                            age,
+                            gender,
+                            country,
+                            city,
+                            total_amount_per_product_sgd,
+                            NTILE(10) OVER (ORDER BY total_amount_per_product_sgd) AS value_decile
+                        FROM sales_data
+                    )
+                    SELECT
+                        CASE 
+                            WHEN value_decile = 1 THEN 'Bottom 10%'
+                            WHEN value_decile = 10 THEN 'Top 10%'
+                        END AS value_segment,
+                        COUNT(*) AS transaction_count,
+                        COUNT(DISTINCT customer_id) AS unique_customers,
+                        AVG(age) AS avg_customer_age,
+                        AVG(total_amount_per_product_sgd) AS avg_transaction_value,
+                        SUM(total_amount_per_product_sgd) AS total_revenue,
+                        (SUM(total_amount_per_product_sgd) / COUNT(*)) / 
+                            (SELECT AVG(total_amount_per_product_sgd) FROM sales_data) AS relative_to_average
+                    FROM transaction_values
+                    WHERE value_decile IN (1, 10)
+                    GROUP BY value_segment
+                    ORDER BY value_segment
+                """
+                results = con.execute(query).fetchall()
+                
+                value_data = []
+                for row in results:
+                    value_data.append(ValueTransaction(
+                        value_segment=str(row[0]),
+                        transaction_count=int(row[1]) if row[1] is not None else 0,
+                        unique_customers=int(row[2]) if row[2] is not None else 0,
+                        avg_customer_age=float(row[3]) if row[3] is not None else None,
+                        avg_transaction_value=float(row[4]) if row[4] is not None else 0.0,
+                        total_revenue=float(row[5]) if row[5] is not None else 0.0,
+                        relative_to_average=float(row[6]) if row[6] is not None else 0.0
+                    ))
+                
+                return value_data
+                
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
+
+    @app.get("/analytics/income-levels/", response_model=List[IncomeLevelAnalysis], tags=["Analytics"])
+    def get_income_level_analysis():
+        """Income Level Analysis - Segments customers by income levels with purchasing patterns"""
+        try:
+            with get_db_connection() as con:
+                # First check if income column exists
+                schema_query = "DESCRIBE sales_data"
+                schema_result = con.execute(schema_query).fetchall()
+                column_names = [row[0] for row in schema_result]
+                has_income = 'income' in column_names
+                
+                if has_income:
+                    query = """
+                        WITH income_segments AS (
+                            SELECT
+                                CASE
+                                    WHEN income < 30000 THEN 'Low Income (< 30k)'
+                                    WHEN income BETWEEN 30000 AND 60000 THEN 'Middle Income (30k-60k)'
+                                    WHEN income BETWEEN 60001 AND 100000 THEN 'Upper Middle (60k-100k)'
+                                    WHEN income > 100000 THEN 'High Income (>100k)'
+                                    ELSE 'Unknown'
+                                END AS income_segment,
+                                customer_id,
+                                total_amount_per_product_sgd
+                            FROM sales_data
+                        )
+                        SELECT
+                            income_segment,
+                            COUNT(DISTINCT customer_id) AS customer_count,
+                            COUNT(*) AS transaction_count,
+                            SUM(total_amount_per_product_sgd) AS total_revenue,
+                            AVG(total_amount_per_product_sgd) AS avg_transaction_value,
+                            SUM(total_amount_per_product_sgd) / COUNT(DISTINCT customer_id) AS avg_spent_per_customer
+                        FROM income_segments
+                        GROUP BY income_segment
+                        ORDER BY 
+                            CASE 
+                                WHEN income_segment = 'Low Income (< 30k)' THEN 1
+                                WHEN income_segment = 'Middle Income (30k-60k)' THEN 2
+                                WHEN income_segment = 'Upper Middle (60k-100k)' THEN 3
+                                WHEN income_segment = 'High Income (>100k)' THEN 4
+                                ELSE 5
+                            END
+                    """
+                else:
+                    # Fallback to age-based income estimation if income column doesn't exist
+                    query = """
+                        WITH income_segments AS (
+                            SELECT
+                                CASE
+                                    WHEN age < 25 THEN 'Young Adults (<25)'
+                                    WHEN age BETWEEN 25 AND 40 THEN 'Mid Career (25-40)'
+                                    WHEN age BETWEEN 41 AND 55 THEN 'Senior Career (41-55)'
+                                    WHEN age > 55 THEN 'Pre-Retirement (55+)'
+                                    ELSE 'Unknown Age'
+                                END AS income_segment,
+                                customer_id,
+                                total_amount_per_product_sgd
+                            FROM sales_data
+                        )
+                        SELECT
+                            income_segment,
+                            COUNT(DISTINCT customer_id) AS customer_count,
+                            COUNT(*) AS transaction_count,
+                            SUM(total_amount_per_product_sgd) AS total_revenue,
+                            AVG(total_amount_per_product_sgd) AS avg_transaction_value,
+                            SUM(total_amount_per_product_sgd) / COUNT(DISTINCT customer_id) AS avg_spent_per_customer
+                        FROM income_segments
+                        GROUP BY income_segment
+                        ORDER BY 
+                            CASE 
+                                WHEN income_segment = 'Young Adults (<25)' THEN 1
+                                WHEN income_segment = 'Mid Career (25-40)' THEN 2
+                                WHEN income_segment = 'Senior Career (41-55)' THEN 3
+                                WHEN income_segment = 'Pre-Retirement (55+)' THEN 4
+                                ELSE 5
+                            END
+                    """
+                
+                results = con.execute(query).fetchall()
+                
+                income_data = []
+                for row in results:
+                    income_data.append(IncomeLevelAnalysis(
+                        income_segment=row[0],
+                        customer_count=int(row[1]),
+                        transaction_count=int(row[2]),
+                        total_revenue=float(row[3]),
+                        avg_transaction_value=float(row[4]),
+                        avg_spent_per_customer=float(row[5])
+                    ))
+                
+                return income_data
                 
         except Exception as e:
             raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
@@ -430,7 +763,7 @@ def main():
                     SELECT 
                         COUNT(*) as transaction_count,
                         SUM(total_amount_per_product_sgd) as daily_revenue,
-                        COUNT(DISTINCT customer_number) as unique_customers,
+                        COUNT(DISTINCT customer_id) as unique_customers,
                         COUNT(DISTINCT receipt_number) as unique_receipts,
                         AVG(receipt_total_sgd) as avg_receipt_value
                     FROM sales_data
@@ -453,8 +786,8 @@ def main():
         except Exception as e:
             raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
 
-    @app.get("/customers/{customer_number}", tags=["Customers"])
-    def get_customer_history(customer_number: int = Path(..., description="Customer number", examples=[100001])):
+    @app.get("/customers/{customer_id}", tags=["Customers"])
+    def get_customer_history(customer_id: str = Path(..., description="Customer ID", examples=["CUST001"])):
         """Get purchase history for a specific customer"""
         try:
             with get_db_connection() as con:
@@ -467,34 +800,34 @@ def main():
                         MIN(date) as first_purchase,
                         MAX(date) as last_purchase
                     FROM sales_data
-                    WHERE customer_number = ?
+                    WHERE customer_id = ?
                 """
-                summary_result = con.execute(summary_query, [customer_number]).fetchone()
+                summary_result = con.execute(summary_query, [customer_id]).fetchone()
                 
                 if summary_result[0] == 0:
-                    raise HTTPException(status_code=404, detail=f"Customer {customer_number} not found")
+                    raise HTTPException(status_code=404, detail=f"Customer {customer_id} not found")
                 
                 # Recent transactions
                 recent_query = """
                     SELECT product_name, units_sold, total_amount_per_product_sgd, date
                     FROM sales_data
-                    WHERE customer_number = ?
+                    WHERE customer_id = ?
                     ORDER BY date DESC
                     LIMIT 10
                 """
-                recent_df = con.execute(recent_query, [customer_number]).df()
+                recent_results = con.execute(recent_query, [customer_id]).fetchall()
                 
                 recent_purchases = []
-                for _, row in recent_df.iterrows():
+                for row in recent_results:
                     recent_purchases.append({
-                        "product_name": row['product_name'],
-                        "units_sold": int(row['units_sold']),
-                        "amount": float(row['total_amount_per_product_sgd']),
-                        "date": str(row['date'])
+                        "product_name": row[0],
+                        "units_sold": int(row[1]),
+                        "amount": float(row[2]),
+                        "date": str(row[3])
                     })
                 
                 return {
-                    "customer_number": customer_number,
+                    "customer_id": customer_id,
                     "total_transactions": int(summary_result[0]),
                     "total_spent": float(summary_result[1]) if summary_result[1] else 0,
                     "total_receipts": int(summary_result[2]),
@@ -512,31 +845,35 @@ def main():
         try:
             with get_db_connection() as con:
                 query = """
-                    SELECT *
+                    SELECT 
+                        date, transaction_id, customer_id, receipt_number,
+                        product_id, product_name, units_sold, unit_price_sgd,
+                        total_amount_per_product_sgd, receipt_total_sgd
                     FROM sales_data
                     WHERE receipt_number = ?
                     ORDER BY product_name
                 """
-                df = con.execute(query, [receipt_number]).df()
+                results = con.execute(query, [receipt_number]).fetchall()
                 
-                if df.empty:
+                if not results:
                     raise HTTPException(status_code=404, detail=f"Receipt {receipt_number} not found")
                 
                 items = []
-                for _, row in df.iterrows():
+                for row in results:
                     items.append({
-                        "product_id": row['product_id'],
-                        "product_name": row['product_name'],
-                        "units_sold": int(row['units_sold']),
-                        "unit_price_sgd": float(row['unit_price_sgd']),
-                        "total_amount_sgd": float(row['total_amount_per_product_sgd'])
+                        "product_id": str(row[4]),
+                        "product_name": str(row[5]),
+                        "units_sold": int(row[6]) if row[6] is not None else 0,
+                        "unit_price_sgd": float(row[7]) if row[7] is not None else 0.0,
+                        "total_amount_sgd": float(row[8]) if row[8] is not None else 0.0
                     })
                 
+                first_row = results[0]
                 return {
                     "receipt_number": receipt_number,
-                    "customer_number": int(df.iloc[0]['customer_number']),
-                    "date": str(df.iloc[0]['date']),
-                    "receipt_total_sgd": float(df.iloc[0]['receipt_total_sgd']),
+                    "customer_id": str(first_row[2]),
+                    "date": str(first_row[0]),
+                    "receipt_total_sgd": float(first_row[9]) if first_row[9] is not None else 0.0,
                     "items": items
                 }
                 
@@ -551,5 +888,4 @@ app = main()
 if __name__ == "__main__":
     app = main()
     uvicorn.run(app, host="0.0.0.0", port=8080)
-    uvicorn.run()
 
