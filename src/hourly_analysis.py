@@ -1,147 +1,220 @@
 import duckdb
 
-def analyze_hourly_sales():
-    """Detailed analysis of sales performance by hour of day"""
+def analyze_daily_sales():
+    """Detailed analysis of sales performance by day"""
     
-    with duckdb.connect('sales_timeseries.db', read_only=True) as con:
-        print("🕐 HOURLY SALES PERFORMANCE ANALYSIS")
+    with duckdb.connect('src/sales_timeseries.db', read_only=True) as con:
+        print("📅 DAILY SALES PERFORMANCE ANALYSIS")
         print("=" * 60)
         
-        # Get hourly sales data
-        hourly_data = con.execute("""
+        # Get daily sales data
+        daily_data = con.execute("""
             SELECT 
-                hour,
+                DATE(date) as sale_date,
+                DAYNAME(date) as day_name,
+                DAYOFWEEK(date) as day_number,
                 COUNT(*) as transactions,
                 SUM(total_amount_per_product_sgd) as revenue,
                 AVG(total_amount_per_product_sgd) as avg_value,
-                COUNT(DISTINCT customer_number) as customers,
+                COUNT(DISTINCT customer_id) as customers,
                 COUNT(DISTINCT receipt_number) as receipts
             FROM sales_data 
             WHERE transaction_desc = 'Product Sale'
-            GROUP BY hour
-            ORDER BY hour
-        """).df()
+            GROUP BY DATE(date), DAYNAME(date), DAYOFWEEK(date)
+            ORDER BY sale_date
+        """).fetchall()
         
-        print("\n📊 COMPLETE HOURLY BREAKDOWN:")
-        print("Hour | Transactions | Revenue (SGD) | Avg Value | Customers")
-        print("-" * 65)
-        for _, row in hourly_data.iterrows():
-            print(f"{int(row['hour']):02d}:00 | {int(row['transactions']):>11,} | {row['revenue']:>13,.0f} | {row['avg_value']:>8.2f} | {int(row['customers']):>9,}")
+        print("\n📊 COMPLETE DAILY BREAKDOWN:")
+        print("Date       | Day        | Transactions | Revenue (SGD) | Avg Value | Customers")
+        print("-" * 80)
         
-        # Find peaks and valleys
-        best_revenue_hour = hourly_data.loc[hourly_data['revenue'].idxmax()]
-        worst_revenue_hour = hourly_data.loc[hourly_data['revenue'].idxmin()]
+        for row in daily_data:
+            date, day_name, day_num, transactions, revenue, avg_value, customers, receipts = row
+            print(f"{date} | {day_name:<10} | {transactions:>11,} | {revenue:>13,.0f} | {avg_value:>8.2f} | {customers:>9,}")
         
-        best_transaction_hour = hourly_data.loc[hourly_data['transactions'].idxmax()]
-        worst_transaction_hour = hourly_data.loc[hourly_data['transactions'].idxmin()]
+        # Convert to list of dicts for easier analysis
+        data_dicts = []
+        for row in daily_data:
+            data_dicts.append({
+                'sale_date': row[0],
+                'day_name': row[1], 
+                'day_number': row[2],
+                'transactions': row[3],
+                'revenue': float(row[4]),  # Convert Decimal to float
+                'avg_value': float(row[5]),  # Convert Decimal to float
+                'customers': row[6],
+                'receipts': row[7]
+            })
         
-        best_avg_value_hour = hourly_data.loc[hourly_data['avg_value'].idxmax()]
-        worst_avg_value_hour = hourly_data.loc[hourly_data['avg_value'].idxmin()]
+        # Check if we have data
+        if not data_dicts:
+            print("No data found!")
+            return [], {}, []
         
-        print("\n🏆 PEAK PERFORMANCE HOURS:")
-        print(f"💰 Highest Revenue: {int(best_revenue_hour['hour']):02d}:00")
-        print(f"   Revenue: SGD ${best_revenue_hour['revenue']:,.2f}")
-        print(f"   Transactions: {int(best_revenue_hour['transactions']):,}")
-        print(f"   Customers: {int(best_revenue_hour['customers']):,}")
+        # Find peaks and valleys - FIXED SYNTAX ERRORS
+        best_revenue_day = max(data_dicts, key=lambda x: x['revenue'])
+        worst_revenue_day = min(data_dicts, key=lambda x: x['revenue'])
         
-        print(f"\n📊 Most Active Hour: {int(best_transaction_hour['hour']):02d}:00")
-        print(f"   Transactions: {int(best_transaction_hour['transactions']):,}")
-        print(f"   Revenue: SGD ${best_transaction_hour['revenue']:,.2f}")
+        best_transaction_day = max(data_dicts, key=lambda x: x['transactions'])
+        worst_transaction_day = min(data_dicts, key=lambda x: x['transactions'])
         
-        print(f"\n💎 Highest Value Hour: {int(best_avg_value_hour['hour']):02d}:00")
-        print(f"   Average Transaction: SGD ${best_avg_value_hour['avg_value']:.2f}")
-        print(f"   Total Revenue: SGD ${best_avg_value_hour['revenue']:,.2f}")
+        best_avg_value_day = max(data_dicts, key=lambda x: x['avg_value'])
+        worst_avg_value_day = min(data_dicts, key=lambda x: x['avg_value'])
         
-        print("\n📉 LOWEST PERFORMANCE HOURS:")
-        print(f"💸 Lowest Revenue: {int(worst_revenue_hour['hour']):02d}:00")
-        print(f"   Revenue: SGD ${worst_revenue_hour['revenue']:,.2f}")
-        print(f"   Transactions: {int(worst_revenue_hour['transactions']):,}")
+        print("\n🏆 PEAK PERFORMANCE DAYS:")
+        print(f"💰 Highest Revenue: {best_revenue_day['sale_date']} ({best_revenue_day['day_name']})")
+        print(f"   Revenue: SGD ${best_revenue_day['revenue']:,.2f}")
+        print(f"   Transactions: {best_revenue_day['transactions']:,}")
+        print(f"   Customers: {best_revenue_day['customers']:,}")
         
-        print(f"\n📉 Least Active Hour: {int(worst_transaction_hour['hour']):02d}:00")
-        print(f"   Transactions: {int(worst_transaction_hour['transactions']):,}")
-        print(f"   Revenue: SGD ${worst_transaction_hour['revenue']:,.2f}")
+        print(f"\n📊 Most Active Day: {best_transaction_day['sale_date']} ({best_transaction_day['day_name']})")
+        print(f"   Transactions: {best_transaction_day['transactions']:,}")
+        print(f"   Revenue: SGD ${best_transaction_day['revenue']:,.2f}")
         
-        print(f"\n💸 Lowest Value Hour: {int(worst_avg_value_hour['hour']):02d}:00")
-        print(f"   Average Transaction: SGD ${worst_avg_value_hour['avg_value']:.2f}")
-        print(f"   Total Revenue: SGD ${worst_avg_value_hour['revenue']:,.2f}")
+        print(f"\n💎 Highest Value Day: {best_avg_value_day['sale_date']} ({best_avg_value_day['day_name']})")
+        print(f"   Average Transaction: SGD ${best_avg_value_day['avg_value']:.2f}")
+        print(f"   Total Revenue: SGD ${best_avg_value_day['revenue']:,.2f}")
         
-        # Time period analysis
-        def get_time_period(hour):
-            if 6 <= hour < 9:
-                return 'Early Morning'
-            elif 9 <= hour < 12:
-                return 'Late Morning'
-            elif 12 <= hour < 15:
-                return 'Early Afternoon'
-            elif 15 <= hour < 18:
-                return 'Late Afternoon'
-            elif 18 <= hour < 21:
-                return 'Evening'
-            else:
-                return 'Night'
+        print("\n📉 LOWEST PERFORMANCE DAYS:")
+        print(f"💸 Lowest Revenue: {worst_revenue_day['sale_date']} ({worst_revenue_day['day_name']})")
+        print(f"   Revenue: SGD ${worst_revenue_day['revenue']:,.2f}")
+        print(f"   Transactions: {worst_revenue_day['transactions']:,}")
         
-        hourly_data['period'] = hourly_data['hour'].apply(get_time_period)
-        period_summary = hourly_data.groupby('period').agg({
-            'transactions': 'sum',
-            'revenue': 'sum',
-            'avg_value': 'mean',
-            'customers': 'sum'
-        }).round(2)
+        print(f"\n📉 Least Active Day: {worst_transaction_day['sale_date']} ({worst_transaction_day['day_name']})")
+        print(f"   Transactions: {worst_transaction_day['transactions']:,}")
+        print(f"   Revenue: SGD ${worst_transaction_day['revenue']:,.2f}")
         
-        period_summary = period_summary.sort_values('revenue', ascending=False)
+        print(f"\n💸 Lowest Value Day: {worst_avg_value_day['sale_date']} ({worst_avg_value_day['day_name']})")
+        print(f"   Average Transaction: SGD ${worst_avg_value_day['avg_value']:.2f}")
+        print(f"   Total Revenue: SGD ${worst_avg_value_day['revenue']:.2f}")  # FIXED: removed extra colon
         
-        print("\n⏰ TIME PERIOD PERFORMANCE:")
-        print("Period | Transactions | Revenue (SGD) | Avg Value | Customers")
-        print("-" * 70)
-        for period, row in period_summary.iterrows():
-            print(f"{period:<15} | {int(row['transactions']):>11,} | {row['revenue']:>13,.0f} | {row['avg_value']:>8.2f} | {int(row['customers']):>9,}")
+        # Day of week analysis
+        dow_summary = {}
+        for row in data_dicts:
+            day_name = row['day_name']
+            if day_name not in dow_summary:
+                dow_summary[day_name] = {
+                    'transactions': 0,
+                    'revenue': 0,
+                    'customers': 0,
+                    'days': 0
+                }
+            dow_summary[day_name]['transactions'] += row['transactions']
+            dow_summary[day_name]['revenue'] += row['revenue']
+            dow_summary[day_name]['customers'] += row['customers']
+            dow_summary[day_name]['days'] += 1
+        
+        # Calculate averages
+        for day in dow_summary:
+            days_count = dow_summary[day]['days']
+            dow_summary[day]['avg_transactions'] = dow_summary[day]['transactions'] / days_count
+            dow_summary[day]['avg_revenue'] = dow_summary[day]['revenue'] / days_count
+            dow_summary[day]['avg_customers'] = dow_summary[day]['customers'] / days_count
+            dow_summary[day]['avg_value'] = dow_summary[day]['revenue'] / dow_summary[day]['transactions'] if dow_summary[day]['transactions'] > 0 else 0
+        
+        # Sort by average revenue
+        sorted_days = sorted(dow_summary.items(), key=lambda x: x[1]['avg_revenue'], reverse=True)
+        
+        print("\n📅 DAY OF WEEK PERFORMANCE:")
+        print("Day        | Avg Transactions | Avg Revenue (SGD) | Avg Value | Avg Customers")
+        print("-" * 80)
+        for day_name, stats in sorted_days:
+            print(f"{day_name:<10} | {stats['avg_transactions']:>15,.1f} | {stats['avg_revenue']:>17,.0f} | {stats['avg_value']:>8.2f} | {stats['avg_customers']:>13,.1f}")
+        
+        # Weekly patterns analysis
+        weekdays = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday']
+        weekends = ['Saturday', 'Sunday']
+        
+        weekday_revenue = sum([dow_summary.get(day, {}).get('avg_revenue', 0) for day in weekdays]) / len(weekdays)
+        weekend_revenue = sum([dow_summary.get(day, {}).get('avg_revenue', 0) for day in weekends]) / len(weekends)
+        
+        weekday_transactions = sum([dow_summary.get(day, {}).get('avg_transactions', 0) for day in weekdays]) / len(weekdays)
+        weekend_transactions = sum([dow_summary.get(day, {}).get('avg_transactions', 0) for day in weekends]) / len(weekends)
+        
+        print("\n📈 WEEKDAY vs WEEKEND COMPARISON:")
+        print(f"🏢 Weekday Average Revenue: SGD ${weekday_revenue:,.0f}")
+        print(f"🎯 Weekend Average Revenue: SGD ${weekend_revenue:,.0f}")
+        
+        # Avoid division by zero
+        if weekday_revenue > 0:
+            print(f"📊 Weekend vs Weekday Revenue: {(weekend_revenue/weekday_revenue-1)*100:+.1f}%")
+        if weekday_transactions > 0:
+            print(f"🏢 Weekday Average Transactions: {weekday_transactions:,.1f}")
+            print(f"🎯 Weekend Average Transactions: {weekend_transactions:,.1f}")
+            print(f"📊 Weekend vs Weekday Transactions: {(weekend_transactions/weekday_transactions-1)*100:+.1f}%")
         
         # Business insights
-        total_revenue = hourly_data['revenue'].sum()
-        peak_revenue_pct = (best_revenue_hour['revenue'] / total_revenue) * 100
-        low_revenue_pct = (worst_revenue_hour['revenue'] / total_revenue) * 100
+        total_revenue = sum([row['revenue'] for row in data_dicts])
+        peak_revenue_pct = (best_revenue_day['revenue'] / total_revenue) * 100
+        low_revenue_pct = (worst_revenue_day['revenue'] / total_revenue) * 100
         
         print("\n💡 BUSINESS INSIGHTS:")
-        print(f"🎯 Peak hour ({int(best_revenue_hour['hour']):02d}:00) generates {peak_revenue_pct:.2f}% of daily revenue")
-        print(f"🎯 Low hour ({int(worst_revenue_hour['hour']):02d}:00) generates {low_revenue_pct:.2f}% of daily revenue")
+        print(f"🎯 Peak day ({best_revenue_day['day_name']}) generates {peak_revenue_pct:.2f}% of total revenue")
+        print(f"🎯 Low day ({worst_revenue_day['day_name']}) generates {low_revenue_pct:.2f}% of total revenue")
         print(f"🎯 Revenue variation: {peak_revenue_pct/low_revenue_pct:.2f}x difference between peak and low")
         
-        # Operating hours recommendation
-        operating_hours = hourly_data[(hourly_data['hour'] >= 6) & (hourly_data['hour'] <= 21)]
-        total_operating_revenue = operating_hours['revenue'].sum()
-        operating_revenue_pct = (total_operating_revenue / total_revenue) * 100
+        # Top and bottom performing days
+        top_5 = sorted(data_dicts, key=lambda x: x['revenue'], reverse=True)[:5]
+        bottom_5 = sorted(data_dicts, key=lambda x: x['revenue'])[:5]
         
-        print("\n🏪 OPERATING HOURS ANALYSIS:")
-        print(f"🕕 Store Hours (06:00-21:59): {operating_revenue_pct:.1f}% of total revenue")
-        print(f"🌙 Night Hours (22:00-05:59): {100-operating_revenue_pct:.1f}% of total revenue")
+        print("\n🥇 TOP 5 REVENUE DAYS:")
+        for i, day in enumerate(top_5, 1):
+            print(f"   {i}. {day['sale_date']} ({day['day_name']}) - SGD ${day['revenue']:,.0f} ({day['transactions']:,} transactions)")
         
-        # Top 3 and bottom 3 hours
-        top_3 = hourly_data.nlargest(3, 'revenue')
-        bottom_3 = hourly_data.nsmallest(3, 'revenue')
+        print("\n🥉 BOTTOM 5 REVENUE DAYS:")
+        for i, day in enumerate(bottom_5, 1):
+            print(f"   {i}. {day['sale_date']} ({day['day_name']}) - SGD ${day['revenue']:,.0f} ({day['transactions']:,} transactions)")
         
-        print("\n🥇 TOP 3 REVENUE HOURS:")
-        for i, (_, row) in enumerate(top_3.iterrows(), 1):
-            print(f"   {i}. {int(row['hour']):02d}:00 - SGD ${row['revenue']:,.0f} ({int(row['transactions']):,} transactions)")
+        # Month trends if data spans multiple months
+        monthly_trends = con.execute("""
+            SELECT 
+                YEAR(date) as year,
+                MONTH(date) as month,
+                MONTHNAME(date) as month_name,
+                COUNT(*) as transactions,
+                SUM(total_amount_per_product_sgd) as revenue,
+                AVG(total_amount_per_product_sgd) as avg_value,
+                COUNT(DISTINCT customer_id) as customers
+            FROM sales_data 
+            WHERE transaction_desc = 'Product Sale'
+            GROUP BY YEAR(date), MONTH(date), MONTHNAME(date)
+            ORDER BY year, month
+        """).fetchall()
         
-        print("\n🥉 BOTTOM 3 REVENUE HOURS:")
-        for i, (_, row) in enumerate(bottom_3.iterrows(), 1):
-            print(f"   {i}. {int(row['hour']):02d}:00 - SGD ${row['revenue']:,.0f} ({int(row['transactions']):,} transactions)")
+        if len(monthly_trends) > 1:
+            print("\n📊 MONTHLY TRENDS:")
+            print("Month      | Transactions | Revenue (SGD) | Avg Value | Customers")
+            print("-" * 70)
+            for row in monthly_trends:
+                year, month, month_name, transactions, revenue, avg_value, customers = row
+                print(f"{month_name} {year} | {transactions:>11,} | {revenue:>13,.0f} | {avg_value:>8.2f} | {customers:>9,}")
         
         # Recommendations
         print("\n🎯 STRATEGIC RECOMMENDATIONS:")
         print("📈 Peak Performance:")
-        print(f"   • Schedule more staff during {int(best_revenue_hour['hour']):02d}:00-{int(best_revenue_hour['hour'])+1:02d}:00")
-        print("   • Focus premium promotions during morning hours")
-        print(f"   • Ensure full inventory during {int(best_transaction_hour['hour']):02d}:00-{int(best_transaction_hour['hour'])+1:02d}:00")
+        best_day_name = sorted_days[0][0]
+        print(f"   • Focus marketing campaigns on {best_day_name}s")
+        print(f"   • Ensure full staffing on {best_day_name}s")
+        print(f"   • Schedule premium product launches on {best_day_name}s")
         
         print("\n📉 Optimization Opportunities:")
-        print(f"   • Consider reduced staffing during {int(worst_revenue_hour['hour']):02d}:00-{int(worst_revenue_hour['hour'])+1:02d}:00")
-        print("   • Use evening hours for maintenance and restocking")
-        print("   • Implement evening discounts to boost sales")
+        worst_day_name = sorted_days[-1][0]
+        print(f"   • Consider promotional campaigns on {worst_day_name}s")
+        print(f"   • Use {worst_day_name}s for staff training and maintenance")
+        print(f"   • Implement special {worst_day_name} discounts to boost sales")
         
-        return hourly_data, period_summary
+        if weekend_revenue > weekday_revenue:
+            print("\n🎯 Weekend Focus Strategy:")
+            print("   • Weekend shoppers drive higher revenue - maintain strong weekend presence")
+            print("   • Consider extending weekend hours")
+        else:
+            print("\n🎯 Weekday Focus Strategy:")
+            print("   • Weekday business is stronger - optimize weekday operations")
+            print("   • Consider weekend promotional events")
+        
+        return data_dicts, dow_summary, monthly_trends
 
 if __name__ == "__main__":
-    hourly_data, period_summary = analyze_hourly_sales()
-    print("\n✅ Hourly analysis complete!")
-    print(f"📊 Data covers {len(hourly_data)} operating hours with detailed insights.")
+    daily_data, dow_summary, monthly_trends = analyze_daily_sales()
+    print("\n✅ Daily analysis complete!")
+    print(f"📊 Data covers {len(daily_data)} days with detailed insights.")
