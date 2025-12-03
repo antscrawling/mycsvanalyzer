@@ -36,7 +36,8 @@ CHUNK_SIZE = 1000  # Reduced from 6000 for better memory management
 # Memory management constants
 MAX_MEMORY_BATCH_SIZE = 500   # Process 500 records at a time to reduce memory usage
 MAX_TRANSACTIONS_PER_HOUR = 5  # Limit transactions per hour (was 10)
-MAX_HOURS_PER_CHUNK = 24      # Process max 24 hours at a time
+MAX_TRANSACTIONS_PER_DAY = 120
+MAX_days_PER_CHUNK = 24      # Process max 24 days at a time
 
 # Define output directories for split files
 SPLIT_CSV_PATH = SPLIT_CSV_FILES  # Output CSV files in csvanalyzer/src/SPLITCSV
@@ -53,7 +54,7 @@ SALES_TIMESERIES_CSV = os.path.join(SOURCE_DIR, 'sales_timeseries.csv')
 SALES_TIMESERIES_DB = os.path.join(SOURCE_DIR, 'sales_timeseries.db')
 SALES_TIMESERIES_PICKLE = os.path.join(SOURCE_DIR,'sales_timeseries.pickle')
 # DATABASE
-
+MAX_DAYS_PER_CHUNK = 60 # Process max 10 days at a time
 
 # Memory-efficient helper functions
 
@@ -156,11 +157,11 @@ def ask_parameters():
             continue
 
         # Split the datetime range into parts with manageable chunks
-        date_ranges = split_hourly_range(start, end)
+        date_ranges = split_datetime_range(start, end)
         
         # Warn user about large date ranges
-        total_hours = (end - start).total_seconds() / 3600
-        estimated_transactions = total_hours * MAX_TRANSACTIONS_PER_HOUR
+        estimated_transactions = (end - start).days * 24 * MAX_TRANSACTIONS_PER_DAY
+        
         
         if estimated_transactions > 100000:  # More than 100k transactions
             print(f"⚠️ Warning: Large dataset detected!")
@@ -466,7 +467,7 @@ def generate_initial_data2(start_iteration:str, end_iteration:str, save_to_duckd
     current_date = start_date
     while current_date <= end_date:
         full_range.append(current_date)
-        current_date += timedelta(hours=1)
+        current_date += timedelta(days=1)
     
 
     # Load dependencies
@@ -583,19 +584,19 @@ def generate_initial_data2(start_iteration:str, end_iteration:str, save_to_duckd
         total_amount_per_product = units_sold * unit_price
         receipt_total = 0
                     
-                    # Add hour variation throughout the day
-        hour = random.randint(6, 21)  # Store hours 6 AM to 10 PM
-        minute = random.randint(0, 59)
-        second = random.randint(0, 59)
+      #             # Add hour variation throughout the day
+      # hour = random.randint(6, 21)  # Store days 6 AM to 10 PM
+      # minute = random.randint(0, 59)
+      # second = random.randint(0, 59)
         
         # Generate fewer transactions per time period to reduce memory usage
-        num_transactions = random.randint(1, MAX_TRANSACTIONS_PER_HOUR)
+        num_transactions = random.randint(1, MAX_TRANSACTIONS_PER_DAY)
         
         for tx_num in range(num_transactions):
             # Create transaction with some time variation
-            hour_offset = random.randint(0, 23)
-            minute_offset = random.randint(0, 59)
-            transaction_datetime = date + timedelta(hours=hour_offset, minutes=minute_offset, seconds=second)
+           # hour_offset = random.randint(0, 23)
+           # minute_offset = random.randint(0, 59)
+            transaction_datetime = date + timedelta(days=1)
             transaction_id = random.randint(1000000, 9999999)
             
             transaction_record = {
@@ -794,41 +795,74 @@ def clear_database_locks():
     import gc
     gc.collect()  # Force garbage collection to clean up any unclosed connections
     
-
-def split_hourly_range(start_datetime, end_datetime, num_parts=None):
-    # Calculate total hours first to avoid generating large lists
-    total_hours = int((end_datetime - start_datetime).total_seconds() / 3600) + 1
-    
+def split_datetime_range(start_datetime, end_datetime, num_parts=MAX_TRANSACTIONS_PER_DAY):
+    """Split a datetime range into smaller chunks based on days to avoid memory issues"""
+    #total_days = int((end_datetime - start_datetime).total_seconds() / 3600) + 1
+    total_days = (end_datetime - start_datetime).days + 1
     # Limit processing to prevent memory issues
-    if total_hours > 8760:  # More than a year
-        print(f"⚠️ Large date range detected: {total_hours} hours")
+    if total_days > 60 :  # More than 2 months
+        print(f"⚠️ Large date range detected: {total_days} days")
         print("Consider using smaller date ranges for better performance")
     
-    # Generate smaller chunks based on hours rather than all timestamps
-    hours_per_chunk = min(MAX_HOURS_PER_CHUNK, max(1, total_hours // 10))  # At least 10 chunks
-    num_parts = max(1, (total_hours + hours_per_chunk - 1) // hours_per_chunk)
+    # Generate smaller chunks based on days rather than all timestamps
+    days_per_chunk = min(MAX_DAYS_PER_CHUNK, max(1, total_days // 10))  # At least 10 chunks
+    num_parts = max(1, (total_days + days_per_chunk - 1) // days_per_chunk)
     
-    print(f"⚙️ Total time span: {total_hours} hours, using {num_parts} chunks of ~{hours_per_chunk} hours each")
+    print(f"⚙️ Total time span: {total_days} days, using {num_parts} chunks of ~{days_per_chunk} days each")
     
     ranges = []
     current_start = start_datetime
     
     for i in range(num_parts):
         # Calculate end time for this chunk
-        hours_in_chunk = min(hours_per_chunk, total_hours - (i * hours_per_chunk))
-        chunk_end = current_start + timedelta(hours=hours_in_chunk - 1)
+        days_in_chunk = min(days_per_chunk, total_days - (i * days_per_chunk))
+        chunk_end = current_start + timedelta(days=days_in_chunk - 1)
         
         # Make sure we don't exceed the end date
         if chunk_end > end_datetime:
             chunk_end = end_datetime
             
         ranges.append((current_start, chunk_end))
-        current_start = chunk_end + timedelta(hours=1)
+        current_start = chunk_end + timedelta(days=1)
         
         if current_start > end_datetime:
             break
     
     return ranges
+#def split_hourly_range(start_datetime, end_datetime, num_parts=None):
+#    # Calculate total days first to avoid generating large lists
+#    total_days = int((end_datetime - start_datetime).total_seconds() / 3600) + 1
+#    
+#    # Limit processing to prevent memory issues
+#    if total_days > 8760:  # More than a year
+#        print(f"⚠️ Large date range detected: {total_days} days")
+#        print("Consider using smaller date ranges for better performance")
+#    
+#    # Generate smaller chunks based on days rather than all timestamps
+#    days_per_chunk = min(MAX_days_PER_CHUNK, max(1, total_days // 10))  # At least 10 chunks
+#    num_parts = max(1, (total_days + days_per_chunk - 1) // days_per_chunk)
+#    
+#    print(f"⚙️ Total time span: {total_days} days, using {num_parts} chunks of ~{days_per_chunk} days each")
+#    
+#    ranges = []
+#    current_start = start_datetime
+#    
+#    for i in range(num_parts):
+#        # Calculate end time for this chunk
+#        days_in_chunk = min(days_per_chunk, total_days - (i * days_per_chunk))
+#        chunk_end = current_start + timedelta(days=days_in_chunk - 1)
+#        
+#        # Make sure we don't exceed the end date
+#        if chunk_end > end_datetime:
+#            chunk_end = end_datetime
+#            
+#        ranges.append((current_start, chunk_end))
+#        current_start = chunk_end + timedelta(days=1)
+#        
+#        if current_start > end_datetime:
+#            break
+#    
+#    return ranges
  
     
 def display_database_indexes(db_path=SALES_TIMESERIES_DB):
@@ -1321,10 +1355,10 @@ def display_db_views(db_path=SALES_TIMESERIES_DB):
                                 print(f"  • Analysis shows {len(rows)} product performance metrics")
                                 print(f"  • Top product details shown in results above")
                         
-                        elif "Hourly Sales" in selected_view['name'] and rows:
+                        elif "Daily Sales" in selected_view['name'] and rows:
                             if rows:
                                 print(f"  • Hourly analysis covers {len(rows)} hour periods")
-                                print(f"  • Peak hours and transaction patterns shown above")
+                                print(f"  • Peak days and transaction patterns shown above")
                         
                         elif "Geographic" in selected_view['name'] and rows:
                             if rows:
